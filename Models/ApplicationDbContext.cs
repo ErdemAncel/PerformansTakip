@@ -32,6 +32,20 @@ namespace PerformansTakip.Models
             modelBuilder.Entity<Student>()
                 .Property(s => s.LastUpdated)
                 .HasColumnType("TEXT");
+
+            // Configure Class entity
+            modelBuilder.Entity<Class>()
+                .Property(c => c.Grade)
+                .IsRequired();
+
+            modelBuilder.Entity<Class>()
+                .Property(c => c.Section)
+                .IsRequired()
+                .HasMaxLength(1);
+
+            modelBuilder.Entity<Class>()
+                .Property(c => c.StudentCount)
+                .HasDefaultValue(0);
         }
     }
 } 

@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using PerformansTakip.Models;
+using Microsoft.EntityFrameworkCore;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace PerformansTakip.Controllers
 {
@@ -14,10 +17,45 @@ namespace PerformansTakip.Controllers
             _context = context;
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            var classes = _context.Classes.ToList();
+            // Sınıfları kontrol et ve yoksa ekle
+            if (!await _context.Classes.AnyAsync())
+            {
+                await SeedClasses();
+            }
+
+            var classes = await _context.Classes
+                .OrderBy(c => c.Grade)
+                .ThenBy(c => c.Section)
+                .ToListAsync();
+
             return View(classes);
+        }
+
+        private async Task SeedClasses()
+        {
+            var grades = new[] { 9, 10, 11, 12 };
+            var sections = new[] { 'A', 'B', 'C', 'D', 'E' };
+
+            foreach (var grade in grades)
+            {
+                foreach (var section in sections)
+                {
+                    var className = $"{grade}-{section}";
+                    var classEntity = new Class
+                    {
+                        Name = className,
+                        Grade = grade,
+                        Section = section.ToString(),
+                        StudentCount = 0
+                    };
+
+                    _context.Classes.Add(classEntity);
+                }
+            }
+
+            await _context.SaveChangesAsync();
         }
 
         public IActionResult Students(int id, string trackingType)

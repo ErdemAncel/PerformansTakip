@@ -6,13 +6,21 @@ namespace PerformansTakip.Models
     {
         public int Id { get; set; }
 
-        [Required]
-        [StringLength(50)]
+        [Required(ErrorMessage = "Sınıf adı zorunludur")]
+        [Display(Name = "Sınıf Adı")]
         public string Name { get; set; }
 
-        public string Description { get; set; }
+        [Required(ErrorMessage = "Sınıf seviyesi zorunludur")]
+        [Display(Name = "Sınıf Seviyesi")]
+        public int Grade { get; set; }
 
-        // Navigation property
-        public virtual ICollection<Student> Students { get; set; }
+        [Required(ErrorMessage = "Şube zorunludur")]
+        [Display(Name = "Şube")]
+        public string Section { get; set; }
+
+        [Display(Name = "Öğrenci Sayısı")]
+        public int StudentCount { get; set; }
+
+        public virtual ICollection<Student> Students { get; set; } = new List<Student>();
     }
 } 

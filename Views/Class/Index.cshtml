@@ -1,41 +1,42 @@
 @model IEnumerable<PerformansTakip.Models.Class>
 
 @{
-    ViewData["Title"] = "Sınıf Listesi";
+    ViewData["Title"] = "Sınıflar";
 }
 
 <div class="container mt-4">
-    <h2 class="mb-4">Sınıf Listesi</h2>
+    <h2 class="mb-4">Sınıflar</h2>
 
     @if (!Model.Any())
     {
         <div class="alert alert-info">
-            Henüz sınıf eklenmemiş. Lütfen önce sınıf ekleyin.
+            Henüz hiç sınıf bulunmamaktadır.
         </div>
     }
     else
     {
         <div class="row">
-            @foreach (var item in Model)
+            @foreach (var classItem in Model)
             {
                 <div class="col-md-4 mb-4">
-                    <div class="card shadow-sm">
+                    <div class="card">
                         <div class="card-body">
-                            <h5 class="card-title">@item.Name</h5>
-                            <p class="card-text">@item.Description</p>
-                            
-                            <div class="list-group mt-3">
-                                <a href="@Url.Action("Students", new { id = item.Id, trackingType = "uniform" })" 
-                                   class="list-group-item list-group-item-action">
-                                    <i class="fas fa-tshirt"></i> Kıyafet Kontrol
+                            <h5 class="card-title">@classItem.Name</h5>
+                            <p class="card-text">
+                                <strong>Öğrenci Sayısı:</strong> @classItem.StudentCount
+                            </p>
+                            <div class="d-flex justify-content-between">
+                                <a href="@Url.Action("Students", new { id = classItem.Id, trackingType = "uniform" })" 
+                                   class="btn btn-primary">
+                                    <i class="fas fa-tshirt"></i> Kıyafet Takibi
                                 </a>
-                                <a href="@Url.Action("Students", new { id = item.Id, trackingType = "homework" })" 
-                                   class="list-group-item list-group-item-action">
-                                    <i class="fas fa-book"></i> Ödev Kontrol
+                                <a href="@Url.Action("Students", new { id = classItem.Id, trackingType = "homework" })" 
+                                   class="btn btn-success">
+                                    <i class="fas fa-book"></i> Ödev Takibi
                                 </a>
-                                <a href="@Url.Action("Students", new { id = item.Id, trackingType = "performance" })" 
-                                   class="list-group-item list-group-item-action">
-                                    <i class="fas fa-chart-line"></i> Performans Kontrol
+                                <a href="@Url.Action("Students", new { id = classItem.Id, trackingType = "performance" })" 
+                                   class="btn btn-info">
+                                    <i class="fas fa-chart-line"></i> Performans
                                 </a>
                             </div>
                         </div>
