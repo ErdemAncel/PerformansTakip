@@ -1,0 +1,123 @@
+@model IEnumerable<PerformansTakip.Models.Student>
+
+@{
+    ViewData["Title"] = $"{ViewBag.ClassName} - {ViewBag.TrackingType}";
+    var trackingType = ViewBag.TrackingType;
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>@ViewBag.ClassName</h2>
+        <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Sınıf Listesine Dön
+        </a>
+    </div>
+
+    <div class="card shadow">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Öğrenci Adı</th>
+                            <th>Soyadı</th>
+                            @switch (trackingType)
+                            {
+                                case "uniform":
+                                    <th>Kıyafet Durumu</th>
+                                    break;
+                                case "homework":
+                                    <th>Ödev Durumu</th>
+                                    break;
+                                case "performance":
+                                    <th>Performans Puanı</th>
+                                    break;
+                            }
+                            <th>Son Güncelleme</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var student in Model)
+                        {
+                            <tr data-student-id="@student.Id">
+                                <td>@student.FirstName</td>
+                                <td>@student.LastName</td>
+                                @switch (trackingType)
+                                {
+                                    case "uniform":
+                                        <td>
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input uniform-status" type="checkbox" 
+                                                       @(student.UniformStatus ? "checked" : "")>
+                                            </div>
+                                        </td>
+                                        break;
+                                    case "homework":
+                                        <td>
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input homework-status" type="checkbox" 
+                                                       @(student.HomeworkStatus ? "checked" : "")>
+                                            </div>
+                                        </td>
+                                        break;
+                                    case "performance":
+                                        <td>
+                                            <input type="number" class="form-control performance-score" 
+                                                   value="@student.PerformanceScore" min="0" max="100">
+                                        </td>
+                                        break;
+                                }
+                                <td>@student.LastUpdated.ToString("dd/MM/yyyy HH:mm")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            $('.uniform-status').change(function() {
+                const studentId = $(this).closest('tr').data('student-id');
+                const status = $(this).prop('checked');
+                
+                $.post('@Url.Action("UpdateUniform")', { studentId, status })
+                    .done(function() {
+                        toastr.success('Kıyafet durumu güncellendi');
+                    })
+                    .fail(function() {
+                        toastr.error('Güncelleme başarısız oldu');
+                    });
+            });
+
+            $('.homework-status').change(function() {
+                const studentId = $(this).closest('tr').data('student-id');
+                const status = $(this).prop('checked');
+                
+                $.post('@Url.Action("UpdateHomework")', { studentId, status })
+                    .done(function() {
+                        toastr.success('Ödev durumu güncellendi');
+                    })
+                    .fail(function() {
+                        toastr.error('Güncelleme başarısız oldu');
+                    });
+            });
+
+            $('.performance-score').change(function() {
+                const studentId = $(this).closest('tr').data('student-id');
+                const score = $(this).val();
+                
+                $.post('@Url.Action("UpdatePerformance")', { studentId, score })
+                    .done(function() {
+                        toastr.success('Performans puanı güncellendi');
+                    })
+                    .fail(function() {
+                        toastr.error('Güncelleme başarısız oldu');
+                    });
+            });
+        });
+    </script>
+} 

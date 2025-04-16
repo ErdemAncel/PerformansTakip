@@ -1,0 +1,51 @@
+@model IEnumerable<PerformansTakip.Models.Class>
+
+@{
+    ViewData["Title"] = "Sınıf Listesi";
+}
+
+<div class="container mt-4">
+    <h2 class="mb-4">Sınıf Listesi</h2>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">
+            Henüz sınıf eklenmemiş. Lütfen önce sınıf ekleyin.
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var item in Model)
+            {
+                <div class="col-md-4 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">@item.Name</h5>
+                            <p class="card-text">@item.Description</p>
+                            
+                            <div class="list-group mt-3">
+                                <a href="@Url.Action("Students", new { id = item.Id, trackingType = "uniform" })" 
+                                   class="list-group-item list-group-item-action">
+                                    <i class="fas fa-tshirt"></i> Kıyafet Kontrol
+                                </a>
+                                <a href="@Url.Action("Students", new { id = item.Id, trackingType = "homework" })" 
+                                   class="list-group-item list-group-item-action">
+                                    <i class="fas fa-book"></i> Ödev Kontrol
+                                </a>
+                                <a href="@Url.Action("Students", new { id = item.Id, trackingType = "performance" })" 
+                                   class="list-group-item list-group-item-action">
+                                    <i class="fas fa-chart-line"></i> Performans Kontrol
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script src="https://kit.fontawesome.com/your-font-awesome-kit.js"></script>
+} 
