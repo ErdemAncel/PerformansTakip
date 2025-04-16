@@ -1,77 +1,121 @@
-@model IEnumerable<PerformansTakip.Models.Student>
+@model List<PerformansTakip.Models.Student>
 
 @{
-    ViewData["Title"] = $"{ViewBag.ClassName} - {ViewBag.TrackingType}";
+    ViewData["Title"] = ViewBag.ClassName + " - Öğrenci Listesi";
     var trackingType = ViewBag.TrackingType;
+    var classId = ViewContext.RouteData.Values["id"];
 }
 
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>@ViewBag.ClassName</h2>
-        <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left"></i> Sınıf Listesine Dön
-        </a>
+        <h2>@ViewBag.ClassName - Öğrenci Listesi</h2>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addStudentModal">
+            <i class="fas fa-plus"></i> Yeni Öğrenci Ekle
+        </button>
     </div>
 
-    <div class="card shadow">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Öğrenci Adı</th>
-                            <th>Soyadı</th>
-                            @switch (trackingType)
-                            {
-                                case "uniform":
-                                    <th>Kıyafet Durumu</th>
-                                    break;
-                                case "homework":
-                                    <th>Ödev Durumu</th>
-                                    break;
-                                case "performance":
-                                    <th>Performans Puanı</th>
-                                    break;
-                            }
-                            <th>Son Güncelleme</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var student in Model)
+    @if (Model == null || !Model.Any())
+    {
+        <div class="alert alert-info">
+            Bu sınıfta henüz öğrenci bulunmamaktadır.
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Öğrenci No</th>
+                        <th>Ad Soyad</th>
+                        @if (trackingType == "uniform")
                         {
-                            <tr data-student-id="@student.Id">
-                                <td>@student.FirstName</td>
-                                <td>@student.LastName</td>
-                                @switch (trackingType)
-                                {
-                                    case "uniform":
-                                        <td>
-                                            <div class="form-check form-switch">
-                                                <input class="form-check-input uniform-status" type="checkbox" 
-                                                       @(student.UniformStatus ? "checked" : "")>
-                                            </div>
-                                        </td>
-                                        break;
-                                    case "homework":
-                                        <td>
-                                            <div class="form-check form-switch">
-                                                <input class="form-check-input homework-status" type="checkbox" 
-                                                       @(student.HomeworkStatus ? "checked" : "")>
-                                            </div>
-                                        </td>
-                                        break;
-                                    case "performance":
-                                        <td>
-                                            <input type="number" class="form-control performance-score" 
-                                                   value="@student.PerformanceScore" min="0" max="100">
-                                        </td>
-                                        break;
-                                }
-                                <td>@student.LastUpdated.ToString("dd/MM/yyyy HH:mm")</td>
-                            </tr>
+                            <th>Kıyafet Durumu</th>
                         }
-                    </tbody>
-                </table>
+                        else if (trackingType == "homework")
+                        {
+                            <th>Ödev Durumu</th>
+                        }
+                        else if (trackingType == "performance")
+                        {
+                            <th>Performans Puanı</th>
+                        }
+                        <th>Son Güncelleme</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var student in Model)
+                    {
+                        <tr>
+                            <td>@student.Id</td>
+                            <td>@student.FirstName @student.LastName</td>
+                            @if (trackingType == "uniform")
+                            {
+                                <td>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input uniform-status" type="checkbox" 
+                                               data-student-id="@student.Id"
+                                               @(student.UniformStatus ? "checked" : "")>
+                                        <label class="form-check-label">
+                                            @(student.UniformStatus ? "Uygun" : "Uygun Değil")
+                                        </label>
+                                    </div>
+                                </td>
+                            }
+                            else if (trackingType == "homework")
+                            {
+                                <td>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input homework-status" type="checkbox" 
+                                               data-student-id="@student.Id"
+                                               @(student.HomeworkStatus ? "checked" : "")>
+                                        <label class="form-check-label">
+                                            @(student.HomeworkStatus ? "Tamamlandı" : "Tamamlanmadı")
+                                        </label>
+                                    </div>
+                                </td>
+                            }
+                            else if (trackingType == "performance")
+                            {
+                                <td>
+                                    <input type="number" class="form-control performance-score" 
+                                           data-student-id="@student.Id"
+                                           value="@student.PerformanceScore" min="0" max="100">
+                                </td>
+                            }
+                            <td>@student.LastUpdated.ToString("dd.MM.yyyy HH:mm")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<!-- Yeni Öğrenci Ekleme Modal -->
+<div class="modal fade" id="addStudentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Yeni Öğrenci Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addStudentForm">
+                    <input type="hidden" id="classId" value="@ViewBag.ClassId" />
+                    <div class="mb-3">
+                        <label class="form-label">Ad</label>
+                        <input type="text" class="form-control" id="firstName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Soyad</label>
+                        <input type="text" class="form-control" id="lastName" required>
+                    </div>
+                    <div class="text-end">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                        <button type="submit" class="btn btn-primary">Kaydet</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -80,44 +124,88 @@
 @section Scripts {
     <script>
         $(document).ready(function() {
+            // Öğrenci ekleme formu
+            $('#addStudentForm').on('submit', function(e) {
+                e.preventDefault();
+                
+                var student = {
+                    ClassId: parseInt($('#classId').val()),
+                    FirstName: $('#firstName').val(),
+                    LastName: $('#lastName').val()
+                };
+                
+                $.ajax({
+                    url: '/Class/AddStudent',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(student),
+                    success: function(response) {
+                        if (response.success) {
+                            $('#addStudentModal').modal('hide');
+                            location.reload();
+                        } else {
+                            alert(response.message);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        alert('Bir hata oluştu: ' + error);
+                    }
+                });
+            });
+
+            // Kıyafet durumu güncelleme
             $('.uniform-status').change(function() {
-                const studentId = $(this).closest('tr').data('student-id');
-                const status = $(this).prop('checked');
-                
-                $.post('@Url.Action("UpdateUniform")', { studentId, status })
-                    .done(function() {
-                        toastr.success('Kıyafet durumu güncellendi');
-                    })
-                    .fail(function() {
-                        toastr.error('Güncelleme başarısız oldu');
-                    });
+                var studentId = $(this).data('student-id');
+                var status = $(this).prop('checked');
+                updateUniformStatus(studentId, status);
             });
 
+            // Ödev durumu güncelleme
             $('.homework-status').change(function() {
-                const studentId = $(this).closest('tr').data('student-id');
-                const status = $(this).prop('checked');
-                
-                $.post('@Url.Action("UpdateHomework")', { studentId, status })
-                    .done(function() {
-                        toastr.success('Ödev durumu güncellendi');
-                    })
-                    .fail(function() {
-                        toastr.error('Güncelleme başarısız oldu');
-                    });
+                var studentId = $(this).data('student-id');
+                var status = $(this).prop('checked');
+                updateHomeworkStatus(studentId, status);
             });
 
+            // Performans puanı güncelleme
             $('.performance-score').change(function() {
-                const studentId = $(this).closest('tr').data('student-id');
-                const score = $(this).val();
-                
-                $.post('@Url.Action("UpdatePerformance")', { studentId, score })
-                    .done(function() {
-                        toastr.success('Performans puanı güncellendi');
-                    })
-                    .fail(function() {
-                        toastr.error('Güncelleme başarısız oldu');
-                    });
+                var studentId = $(this).data('student-id');
+                var score = $(this).val();
+                updatePerformanceScore(studentId, score);
             });
         });
+
+        function updateUniformStatus(studentId, status) {
+            $.post('/Class/UpdateUniform', { studentId: studentId, status: status })
+                .done(function(response) {
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        alert('Güncelleme başarısız: ' + response.message);
+                    }
+                });
+        }
+
+        function updateHomeworkStatus(studentId, status) {
+            $.post('/Class/UpdateHomework', { studentId: studentId, status: status })
+                .done(function(response) {
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        alert('Güncelleme başarısız: ' + response.message);
+                    }
+                });
+        }
+
+        function updatePerformanceScore(studentId, score) {
+            $.post('/Class/UpdatePerformance', { studentId: studentId, score: score })
+                .done(function(response) {
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        alert('Güncelleme başarısız: ' + response.message);
+                    }
+                });
+        }
     </script>
 } 
