@@ -197,11 +197,10 @@ namespace PerformansTakip.Controllers
                     return Json(new { success = false, message = "Sınıf bulunamadı. ClassId: " + request.classId });
                 }
 
-                // Sınıfta öğrenci var mı kontrol et
-                var existingStudents = await _context.Students.CountAsync(s => s.ClassId == request.classId);
-                if (existingStudents > 0)
+                // Öğrenci isimlerini kontrol et
+                if (request.studentNames == null || !request.studentNames.Any())
                 {
-                    return Json(new { success = false, message = "Bu sınıfta zaten öğrenciler bulunmaktadır." });
+                    return Json(new { success = false, message = "En az bir öğrenci bilgisi girmelisiniz." });
                 }
 
                 foreach (var fullName in request.studentNames)
