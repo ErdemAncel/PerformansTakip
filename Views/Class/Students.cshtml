@@ -9,9 +9,14 @@
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>@ViewBag.ClassName - Öğrenci Listesi</h2>
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addStudentModal">
-            <i class="fas fa-plus"></i> Yeni Öğrenci Ekle
-        </button>
+        <div>
+            <button type="button" class="btn btn-danger me-2" onclick="deleteAllStudents()">
+                <i class="fas fa-trash"></i> Tüm Öğrencileri Sil
+            </button>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addStudentModal">
+                <i class="fas fa-plus"></i> Yeni Öğrenci Ekle
+            </button>
+        </div>
     </div>
 
     @if (Model == null || !Model.Any())
@@ -41,6 +46,7 @@
                             <th>Performans Puanı</th>
                         }
                         <th>Son Güncelleme</th>
+                        <th>İşlemler</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -78,12 +84,32 @@
                             else if (trackingType == "performance")
                             {
                                 <td>
-                                    <input type="number" class="form-control performance-score" 
-                                           data-student-id="@student.Id"
-                                           value="@student.PerformanceScore" min="0" max="100">
+                                    <div class="input-group">
+                                        <input type="number" 
+                                               class="form-control performance-score" 
+                                               data-student-id="@student.Id"
+                                               value="@student.PerformanceScore" 
+                                               min="0" 
+                                               max="100"
+                                               style="font-size: 1.25rem; text-align: center;"
+                                               onfocus="this.select()">
+                                        <button class="btn btn-outline-primary score-save-btn" 
+                                                data-student-id="@student.Id"
+                                                style="display: none;">
+                                            <i class="fas fa-save"></i>
+                                        </button>
+                                    </div>
+                                    <small class="text-muted mobile-warning" style="display: none;">
+                                        <i class="fas fa-exclamation-triangle"></i> Lütfen puan girişini bilgisayardan yapın
+                                    </small>
                                 </td>
                             }
                             <td>@student.LastUpdated.ToString("dd.MM.yyyy HH:mm")</td>
+                            <td>
+                                <button type="button" class="btn btn-danger btn-sm" onclick="deleteStudent(@student.Id)">
+                                    <i class="fas fa-trash"></i> Sil
+                                </button>
+                            </td>
                         </tr>
                     }
                 </tbody>
@@ -167,11 +193,58 @@
                 updateHomeworkStatus(studentId, status);
             });
 
-            // Performans puanı güncelleme
-            $('.performance-score').change(function() {
-                var studentId = $(this).data('student-id');
-                var score = $(this).val();
-                updatePerformanceScore(studentId, score);
+            // Mobil cihaz kontrolü
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            
+            if (isMobile) {
+                // Mobil cihazlarda input alanlarını devre dışı bırak ve uyarı göster
+                $('.performance-score').prop('readonly', true);
+                $('.mobile-warning').show();
+                
+                // Input alanına tıklandığında uyarı göster
+                $('.performance-score').on('focus', function() {
+                    showToast('Lütfen puan girişini bilgisayardan yapın', 'warning');
+                });
+            }
+
+            // Performans puanı girişi için event listener'lar
+            $('.performance-score').on('input', function() {
+                if (!isMobile) {
+                    const saveBtn = $(this).siblings('.score-save-btn');
+                    saveBtn.show();
+                }
+            });
+
+            $('.score-save-btn').on('click', function() {
+                if (!isMobile) {
+                    const studentId = $(this).data('student-id');
+                    const score = $(this).siblings('.performance-score').val();
+                    updatePerformanceScore(studentId, score);
+                    $(this).hide();
+                }
+            });
+
+            // Enter tuşu ile kaydetme
+            $('.performance-score').on('keypress', function(e) {
+                if (!isMobile && e.which === 13) {
+                    const studentId = $(this).data('student-id');
+                    const score = $(this).val();
+                    updatePerformanceScore(studentId, score);
+                    $(this).siblings('.score-save-btn').hide();
+                    e.preventDefault();
+                }
+            });
+
+            // Input alanından çıkıldığında kaydetme
+            $('.performance-score').on('blur', function() {
+                if (!isMobile) {
+                    const studentId = $(this).data('student-id');
+                    const score = $(this).val();
+                    if (score !== '') {
+                        updatePerformanceScore(studentId, score);
+                        $(this).siblings('.score-save-btn').hide();
+                    }
+                }
             });
         });
 
@@ -198,14 +271,267 @@
         }
 
         function updatePerformanceScore(studentId, score) {
-            $.post('/Class/UpdatePerformance', { studentId: studentId, score: score })
+            if (score === '') return;
+            
+            const numericScore = parseInt(score);
+            if (isNaN(numericScore) || numericScore < 0 || numericScore > 100) {
+                showToast('Lütfen 0-100 arası geçerli bir puan girin', 'error');
+                return;
+            }
+
+            $.post('/Class/UpdatePerformance', { studentId: studentId, score: numericScore })
                 .done(function(response) {
                     if (response.success) {
+                        showToast('Puan başarıyla güncellendi', 'success');
+                    } else {
+                        showToast('Güncelleme başarısız: ' + response.message, 'error');
+                    }
+                })
+                .fail(function() {
+                    showToast('Bir hata oluştu', 'error');
+                });
+        }
+
+        function getStudentListForClass(grade, section) {
+            const studentLists = {
+                '9A': [
+                    "Elif Yılmaz", "Ahmet Demir", "Zeynep Kaya", "Mehmet Arslan", "Ayşe Koç",
+                    "Mustafa Yıldız", "Fatma Şahin", "Emre Acar", "Hatice Kılıç", "Yusuf Çetin",
+                    "Merve Polat", "Burak Karaca", "Ceren Özkan", "Oğuzhan Güler", "Rabia Aksoy",
+                    "Kerem Doğan", "Kübra Eren", "Onur Kaplan", "İrem Sezer", "Alperen Taş",
+                    "Melisa Bozkurt", "Berkay Avcı", "Büşra Tekin", "Furkan Yavuz", "Simge Uysal",
+                    "Batuhan Tuncel", "Nisa Ergin", "Kaan Bulut", "Hilal Aslan", "Efe Erdoğan"
+                ],
+                '9B': [
+                    "Deniz Aydın", "Can Yıldırım", "Selin Demir", "Berk Öztürk", "Gizem Şahin",
+                    "Tolga Kaya", "Pınar Yılmaz", "Serkan Arslan", "Derya Koç", "Murat Acar",
+                    "Aslıhan Kılıç", "Cem Çetin", "Esra Polat", "Kemal Karaca", "Zehra Özkan",
+                    "Baran Güler", "İpek Aksoy", "Tayfun Doğan", "Sude Eren", "Koray Kaplan",
+                    "Merve Sezer", "Ozan Taş", "İrem Bozkurt", "Burak Avcı", "Cansu Tekin",
+                    "Emir Yavuz", "Elif Uysal", "Kaan Tuncel", "Sıla Ergin", "Berk Bulut"
+                ],
+                '9C': [
+                    "Ece Aslan", "Arda Erdoğan", "Sena Yılmaz", "Kaan Demir", "İrem Kaya",
+                    "Berk Arslan", "Zeynep Koç", "Emir Yıldız", "Selin Şahin", "Can Acar",
+                    "Deniz Kılıç", "Pınar Çetin", "Tolga Polat", "Gizem Karaca", "Serkan Özkan",
+                    "Derya Güler", "Murat Aksoy", "Aslıhan Doğan", "Cem Eren", "Esra Kaplan",
+                    "Kemal Sezer", "Zehra Taş", "Baran Bozkurt", "İpek Avcı", "Tayfun Tekin",
+                    "Sude Yavuz", "Koray Uysal", "Merve Tuncel", "Ozan Ergin", "İrem Bulut"
+                ],
+                '9D': [
+                    "Burak Aslan", "Cansu Erdoğan", "Emir Yılmaz", "Elif Demir", "Kaan Kaya",
+                    "Sıla Arslan", "Berk Koç", "Ece Yıldız", "Arda Şahin", "Sena Acar",
+                    "Kaan Kılıç", "İrem Çetin", "Berk Polat", "Zeynep Karaca", "Emir Özkan",
+                    "Selin Güler", "Can Aksoy", "Deniz Doğan", "Pınar Eren", "Tolga Kaplan",
+                    "Gizem Sezer", "Serkan Taş", "Derya Bozkurt", "Murat Avcı", "Aslıhan Tekin",
+                    "Cem Yavuz", "Esra Uysal", "Kemal Tuncel", "Zehra Ergin", "Baran Bulut"
+                ],
+                '9E': [
+                    "İpek Aslan", "Tayfun Erdoğan", "Sude Yılmaz", "Koray Demir", "Merve Kaya",
+                    "Ozan Arslan", "İrem Koç", "Burak Yıldız", "Cansu Şahin", "Emir Acar",
+                    "Elif Kılıç", "Kaan Çetin", "Sıla Polat", "Berk Karaca", "Ece Özkan",
+                    "Arda Güler", "Sena Aksoy", "Kaan Doğan", "İrem Eren", "Berk Kaplan",
+                    "Zeynep Sezer", "Emir Taş", "Selin Bozkurt", "Can Avcı", "Deniz Tekin",
+                    "Pınar Yavuz", "Tolga Uysal", "Gizem Tuncel", "Serkan Ergin", "Derya Bulut"
+                ],
+                '10A': [
+                    "Murat Aslan", "Aslıhan Erdoğan", "Cem Yılmaz", "Esra Demir", "Kemal Kaya",
+                    "Zehra Arslan", "Baran Koç", "İpek Yıldız", "Tayfun Şahin", "Sude Acar",
+                    "Koray Kılıç", "Merve Çetin", "Ozan Polat", "İrem Karaca", "Burak Özkan",
+                    "Cansu Güler", "Emir Aksoy", "Elif Doğan", "Kaan Eren", "Sıla Kaplan",
+                    "Berk Sezer", "Ece Taş", "Arda Bozkurt", "Sena Avcı", "Kaan Tekin",
+                    "İrem Yavuz", "Berk Uysal", "Zeynep Tuncel", "Emir Ergin", "Selin Bulut"
+                ],
+                '10B': [
+                    "Can Aslan", "Deniz Erdoğan", "Pınar Yılmaz", "Tolga Demir", "Gizem Kaya",
+                    "Serkan Arslan", "Derya Koç", "Murat Yıldız", "Aslıhan Şahin", "Cem Acar",
+                    "Esra Kılıç", "Kemal Çetin", "Zehra Polat", "Baran Karaca", "İpek Özkan",
+                    "Tayfun Güler", "Sude Aksoy", "Koray Doğan", "Merve Eren", "Ozan Kaplan",
+                    "İrem Sezer", "Burak Taş", "Cansu Bozkurt", "Emir Avcı", "Elif Tekin",
+                    "Kaan Yavuz", "Sıla Uysal", "Berk Tuncel", "Ece Ergin", "Arda Bulut"
+                ],
+                '10C': [
+                    "Sena Aslan", "Kaan Erdoğan", "İrem Yılmaz", "Berk Demir", "Zeynep Kaya",
+                    "Emir Arslan", "Selin Koç", "Can Yıldız", "Deniz Şahin", "Pınar Acar",
+                    "Tolga Kılıç", "Gizem Çetin", "Serkan Polat", "Derya Karaca", "Murat Özkan",
+                    "Aslıhan Güler", "Cem Aksoy", "Esra Doğan", "Kemal Eren", "Zehra Kaplan",
+                    "Baran Sezer", "İpek Taş", "Tayfun Bozkurt", "Sude Avcı", "Koray Tekin",
+                    "Merve Yavuz", "Ozan Uysal", "İrem Tuncel", "Burak Ergin", "Cansu Bulut"
+                ],
+                '10D': [
+                    "Emir Aslan", "Elif Erdoğan", "Kaan Yılmaz", "Sıla Demir", "Berk Kaya",
+                    "Ece Arslan", "Arda Koç", "Sena Yıldız", "Kaan Şahin", "İrem Acar",
+                    "Berk Kılıç", "Zeynep Çetin", "Emir Polat", "Selin Karaca", "Can Özkan",
+                    "Deniz Güler", "Pınar Aksoy", "Tolga Doğan", "Gizem Eren", "Serkan Kaplan",
+                    "Derya Sezer", "Murat Taş", "Aslıhan Bozkurt", "Cem Avcı", "Esra Tekin",
+                    "Kemal Yavuz", "Zehra Uysal", "Baran Tuncel", "İpek Ergin", "Tayfun Bulut"
+                ],
+                '10E': [
+                    "Sude Aslan", "Koray Erdoğan", "Merve Yılmaz", "Ozan Demir", "İrem Kaya",
+                    "Burak Arslan", "Cansu Koç", "Emir Yıldız", "Elif Şahin", "Kaan Acar",
+                    "Sıla Kılıç", "Berk Çetin", "Ece Polat", "Arda Karaca", "Sena Özkan",
+                    "Kaan Güler", "İrem Aksoy", "Berk Doğan", "Zeynep Eren", "Emir Kaplan",
+                    "Selin Sezer", "Can Taş", "Deniz Bozkurt", "Pınar Avcı", "Tolga Tekin",
+                    "Gizem Yavuz", "Serkan Uysal", "Derya Tuncel", "Murat Ergin", "Aslıhan Bulut"
+                ],
+                '11A': [
+                    "Cem Aslan", "Esra Erdoğan", "Kemal Yılmaz", "Zehra Demir", "Baran Kaya",
+                    "İpek Arslan", "Tayfun Koç", "Sude Yıldız", "Koray Şahin", "Merve Acar",
+                    "Ozan Kılıç", "İrem Çetin", "Burak Polat", "Cansu Karaca", "Emir Özkan",
+                    "Elif Güler", "Kaan Aksoy", "Sıla Doğan", "Berk Eren", "Ece Kaplan",
+                    "Arda Sezer", "Sena Taş", "Kaan Bozkurt", "İrem Avcı", "Berk Tekin",
+                    "Zeynep Yavuz", "Emir Uysal", "Selin Tuncel", "Can Ergin", "Deniz Bulut"
+                ],
+                '11B': [
+                    "Pınar Aslan", "Tolga Erdoğan", "Gizem Yılmaz", "Serkan Demir", "Derya Kaya",
+                    "Murat Arslan", "Aslıhan Koç", "Cem Yıldız", "Esra Şahin", "Kemal Acar",
+                    "Zehra Kılıç", "Baran Çetin", "İpek Polat", "Tayfun Karaca", "Sude Özkan",
+                    "Koray Güler", "Merve Aksoy", "Ozan Doğan", "İrem Eren", "Burak Kaplan",
+                    "Cansu Sezer", "Emir Taş", "Elif Bozkurt", "Kaan Avcı", "Sıla Tekin",
+                    "Berk Yavuz", "Ece Uysal", "Arda Tuncel", "Sena Ergin", "Kaan Bulut"
+                ],
+                '11C': [
+                    "İrem Aslan", "Berk Erdoğan", "Zeynep Yılmaz", "Emir Demir", "Selin Kaya",
+                    "Can Arslan", "Deniz Koç", "Pınar Yıldız", "Tolga Şahin", "Gizem Acar",
+                    "Serkan Kılıç", "Derya Çetin", "Murat Polat", "Aslıhan Karaca", "Cem Özkan",
+                    "Esra Güler", "Kemal Aksoy", "Zehra Doğan", "Baran Eren", "İpek Kaplan",
+                    "Tayfun Sezer", "Sude Taş", "Koray Bozkurt", "Merve Avcı", "Ozan Tekin",
+                    "İrem Yavuz", "Burak Uysal", "Cansu Tuncel", "Emir Ergin", "Elif Bulut"
+                ],
+                '11D': [
+                    "Kaan Aslan", "Sıla Erdoğan", "Berk Yılmaz", "Ece Demir", "Arda Kaya",
+                    "Sena Arslan", "Kaan Koç", "İrem Yıldız", "Berk Şahin", "Zeynep Acar",
+                    "Emir Kılıç", "Selin Çetin", "Can Polat", "Deniz Karaca", "Pınar Özkan",
+                    "Tolga Güler", "Gizem Aksoy", "Serkan Doğan", "Derya Eren", "Murat Kaplan",
+                    "Aslıhan Sezer", "Cem Taş", "Esra Bozkurt", "Kemal Avcı", "Zehra Tekin",
+                    "Baran Yavuz", "İpek Uysal", "Tayfun Tuncel", "Sude Ergin", "Koray Bulut"
+                ],
+                '11E': [
+                    "Merve Aslan", "Ozan Erdoğan", "İrem Yılmaz", "Burak Demir", "Cansu Kaya",
+                    "Emir Arslan", "Elif Koç", "Kaan Yıldız", "Sıla Şahin", "Berk Acar",
+                    "Ece Kılıç", "Arda Çetin", "Sena Polat", "Kaan Karaca", "İrem Özkan",
+                    "Berk Güler", "Zeynep Aksoy", "Emir Doğan", "Selin Eren", "Can Kaplan",
+                    "Deniz Sezer", "Pınar Taş", "Tolga Bozkurt", "Gizem Avcı", "Serkan Tekin",
+                    "Derya Yavuz", "Murat Uysal", "Aslıhan Tuncel", "Cem Ergin", "Esra Bulut"
+                ],
+                '12A': [
+                    "Kemal Aslan", "Zehra Erdoğan", "Baran Yılmaz", "İpek Demir", "Tayfun Kaya",
+                    "Sude Arslan", "Koray Koç", "Merve Yıldız", "Ozan Şahin", "İrem Acar",
+                    "Burak Kılıç", "Cansu Çetin", "Emir Polat", "Elif Karaca", "Kaan Özkan",
+                    "Sıla Güler", "Berk Aksoy", "Ece Doğan", "Arda Eren", "Sena Kaplan",
+                    "Kaan Sezer", "İrem Taş", "Berk Bozkurt", "Zeynep Avcı", "Emir Tekin",
+                    "Selin Yavuz", "Can Uysal", "Deniz Tuncel", "Pınar Ergin", "Tolga Bulut"
+                ],
+                '12B': [
+                    "Gizem Aslan", "Serkan Erdoğan", "Derya Yılmaz", "Murat Demir", "Aslıhan Kaya",
+                    "Cem Arslan", "Esra Koç", "Kemal Yıldız", "Zehra Şahin", "Baran Acar",
+                    "İpek Kılıç", "Tayfun Çetin", "Sude Polat", "Koray Karaca", "Merve Özkan",
+                    "Ozan Güler", "İrem Aksoy", "Burak Doğan", "Cansu Eren", "Emir Kaplan",
+                    "Elif Sezer", "Kaan Taş", "Sıla Bozkurt", "Berk Avcı", "Ece Tekin",
+                    "Arda Yavuz", "Sena Uysal", "Kaan Tuncel", "İrem Ergin", "Berk Bulut"
+                ],
+                '12C': [
+                    "Zeynep Aslan", "Emir Erdoğan", "Selin Yılmaz", "Can Demir", "Deniz Kaya",
+                    "Pınar Arslan", "Tolga Koç", "Gizem Yıldız", "Serkan Şahin", "Derya Acar",
+                    "Murat Kılıç", "Aslıhan Çetin", "Cem Polat", "Esra Karaca", "Kemal Özkan",
+                    "Zehra Güler", "Baran Aksoy", "İpek Doğan", "Tayfun Eren", "Sude Kaplan",
+                    "Koray Sezer", "Merve Taş", "Ozan Bozkurt", "İrem Avcı", "Burak Tekin",
+                    "Cansu Yavuz", "Emir Uysal", "Elif Tuncel", "Kaan Ergin", "Sıla Bulut"
+                ],
+                '12D': [
+                    "Berk Aslan", "Ece Erdoğan", "Arda Yılmaz", "Sena Demir", "Kaan Kaya",
+                    "İrem Arslan", "Berk Koç", "Zeynep Yıldız", "Emir Şahin", "Selin Acar",
+                    "Can Kılıç", "Deniz Çetin", "Pınar Polat", "Tolga Karaca", "Gizem Özkan",
+                    "Serkan Güler", "Derya Aksoy", "Murat Doğan", "Aslıhan Eren", "Cem Kaplan",
+                    "Esra Sezer", "Kemal Taş", "Zehra Bozkurt", "Baran Avcı", "İpek Tekin",
+                    "Tayfun Yavuz", "Sude Uysal", "Koray Tuncel", "Merve Ergin", "Ozan Bulut"
+                ],
+                '12E': [
+                    "İrem Aslan", "Burak Erdoğan", "Cansu Yılmaz", "Emir Demir", "Elif Kaya",
+                    "Kaan Arslan", "Sıla Koç", "Berk Yıldız", "Ece Şahin", "Arda Acar",
+                    "Sena Kılıç", "Kaan Çetin", "İrem Polat", "Berk Karaca", "Zeynep Özkan",
+                    "Emir Güler", "Selin Aksoy", "Can Doğan", "Deniz Eren", "Pınar Kaplan",
+                    "Tolga Sezer", "Gizem Taş", "Serkan Bozkurt", "Derya Avcı", "Murat Tekin",
+                    "Aslıhan Yavuz", "Cem Uysal", "Esra Tuncel", "Kemal Ergin", "Zehra Bulut"
+                ]
+            };
+
+            const classKey = `${grade}${section}`;
+            return studentLists[classKey] || [];
+        }
+
+        function addMultipleStudents() {
+            const classId = @ViewBag.ClassId;
+            const className = '@ViewBag.ClassName';
+            const [grade, section] = className.split('-');
+            
+            const studentNames = getStudentListForClass(grade, section);
+            if (studentNames.length === 0) {
+                alert('Bu sınıf için öğrenci listesi bulunamadı.');
+                return;
+            }
+
+            console.log('Adding students for class:', classId); // Debug için
+
+            $.ajax({
+                url: '/Class/AddMultipleStudents',
+                type: 'POST',
+                data: JSON.stringify({
+                    classId: classId,
+                    studentNames: studentNames
+                }),
+                contentType: 'application/json',
+                success: function(response) {
+                    if (response.success) {
+                        alert(response.message);
                         location.reload();
                     } else {
-                        alert('Güncelleme başarısız: ' + response.message);
+                        alert('Hata: ' + response.message);
                     }
-                });
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error:', error);
+                    alert('Bir hata oluştu!');
+                }
+            });
+        }
+
+        // Add button to the page
+        document.addEventListener('DOMContentLoaded', function() {
+            const addButton = document.createElement('button');
+            addButton.className = 'btn btn-primary mb-3';
+            addButton.innerHTML = '<i class="fas fa-users"></i> Toplu Öğrenci Ekle';
+            addButton.onclick = addMultipleStudents;
+            
+            const container = document.querySelector('.container');
+            container.insertBefore(addButton, container.firstChild);
+        });
+
+        function deleteAllStudents() {
+            if (!confirm('Tüm öğrencileri silmek istediğinizden emin misiniz? Bu işlem geri alınamaz!')) {
+                return;
+            }
+
+            const classId = @ViewBag.ClassId;
+            console.log('Deleting students for class:', classId); // Debug için
+
+            $.ajax({
+                url: '/Class/DeleteAllStudents',
+                type: 'POST',
+                data: { classId: classId },
+                success: function(response) {
+                    if (response.success) {
+                        alert(response.message);
+                        location.reload();
+                    } else {
+                        alert('Hata: ' + response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error:', error);
+                    alert('Bir hata oluştu!');
+                }
+            });
         }
     </script>
 } 

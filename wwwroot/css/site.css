@@ -1,31 +1,310 @@
-html {
-  font-size: 14px;
-}
-
-@media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
-}
-
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
-}
-
-html {
-  position: relative;
-  min-height: 100%;
+/* Genel Stiller */
+:root {
+    --primary-color: #4e73df;
+    --secondary-color: #858796;
+    --success-color: #1cc88a;
+    --info-color: #36b9cc;
+    --warning-color: #f6c23e;
+    --danger-color: #e74a3b;
+    --light-color: #f8f9fc;
+    --dark-color: #5a5c69;
 }
 
 body {
-  margin-bottom: 60px;
+    font-family: 'Nunito', sans-serif;
+    background-color: var(--light-color);
+    color: var(--dark-color);
 }
 
-.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
-  color: var(--bs-secondary-color);
-  text-align: end;
+/* Navbar Stilleri */
+.navbar {
+    background-color: white;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    padding: 1rem 0;
 }
 
-.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
-  text-align: start;
+.navbar-brand {
+    font-weight: 800;
+    font-size: 1.5rem;
+    color: var(--primary-color) !important;
+}
+
+.nav-link {
+    color: var(--secondary-color) !important;
+    font-weight: 600;
+    padding: 0.5rem 1rem !important;
+    transition: all 0.3s ease;
+}
+
+.nav-link:hover {
+    color: var(--primary-color) !important;
+    transform: translateY(-2px);
+}
+
+/* Ana İçerik Alanı */
+.main-content {
+    padding: 2rem 0;
+    min-height: calc(100vh - 200px);
+}
+
+/* Kartlar */
+.card {
+    border: none;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 2rem 0 rgba(58, 59, 69, 0.2);
+}
+
+.card-header {
+    background-color: white;
+    border-bottom: 1px solid #e3e6f0;
+    padding: 1.25rem;
+}
+
+.card-body {
+    padding: 1.25rem;
+}
+
+/* Butonlar */
+.btn {
+    border-radius: 0.35rem;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+    background-color: #2e59d9;
+    border-color: #2653d4;
+    transform: translateY(-2px);
+}
+
+/* Tablolar */
+.table {
+    margin-bottom: 0;
+}
+
+.table th {
+    font-weight: 700;
+    color: var(--dark-color);
+    background-color: #f8f9fc;
+    border-bottom: 2px solid #e3e6f0;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(78, 115, 223, 0.05);
+}
+
+/* Form Elemanları */
+.form-control {
+    border-radius: 0.35rem;
+    border: 1px solid #d1d3e2;
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+}
+
+/* Sayısal input alanları için özel stiller */
+input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Input grupları için özel stiller */
+.input-group {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    width: 100%;
+}
+
+.input-group .form-control {
+    position: relative;
+    flex: 1 1 auto;
+    width: 1%;
+    min-width: 0;
+}
+
+.input-group-text {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+    color: #6e707e;
+    text-align: center;
+    white-space: nowrap;
+    background-color: #f8f9fc;
+    border: 1px solid #d1d3e2;
+    border-radius: 0.35rem;
+}
+
+/* Form validasyon mesajları */
+.invalid-feedback {
+    display: none;
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 0.875em;
+    color: #e74a3b;
+}
+
+.is-invalid ~ .invalid-feedback {
+    display: block;
+}
+
+/* Animasyonlar */
+.animate__animated {
+    animation-duration: 0.5s;
+}
+
+/* Footer */
+.footer {
+    background-color: white;
+    padding: 1.5rem 0;
+    border-top: 1px solid #e3e6f0;
+    margin-top: auto;
+}
+
+/* Responsive Düzenlemeler */
+@media (max-width: 768px) {
+    .navbar-brand {
+        font-size: 1.25rem;
+    }
+    
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    .table-responsive {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Özel Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #2e59d9;
+}
+
+/* Loading Spinner */
+.spinner-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Mobil cihazlar için puan girişi stilleri */
+.score-input-container {
+    padding: 1rem;
+    background-color: white;
+    border-radius: 0.5rem;
+    margin: 1rem 0;
+}
+
+.score-input {
+    font-size: 1.25rem;
+    text-align: center;
+    padding: 1rem;
+    height: auto;
+}
+
+/* Mobil cihazlar için özel düzenlemeler */
+@media (max-width: 768px) {
+    .score-input-btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+        padding: 0.75rem;
+        font-size: 1rem;
+    }
+
+    .score-input-container {
+        margin: 0.5rem 0;
+    }
+
+    .score-input {
+        font-size: 1.5rem;
+        padding: 1.25rem;
+    }
+
+    /* SweetAlert2 modal ayarları */
+    .swal2-popup {
+        width: 90% !important;
+        max-width: 400px;
+        padding: 1.5rem !important;
+    }
+
+    .swal2-title {
+        font-size: 1.25rem !important;
+    }
+
+    .swal2-content {
+        font-size: 1rem !important;
+    }
+
+    .swal2-confirm,
+    .swal2-cancel {
+        width: 45% !important;
+        margin: 0.5rem !important;
+        padding: 0.75rem !important;
+    }
 }

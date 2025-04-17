@@ -177,9 +177,7 @@ C:\Users\Acer\OneDrive\Masaüstü\PerformansTakip\obj\Debug\net9.0\PerformansTak
 C:\Users\Acer\OneDrive\Masaüstü\PerformansTakip\obj\Debug\net9.0\scopedcss\Views\Shared\_Layout.cshtml.rz.scp.css
 C:\Users\Acer\OneDrive\Masaüstü\PerformansTakip\obj\Debug\net9.0\scopedcss\bundle\PerformansTakip.styles.css
 C:\Users\Acer\OneDrive\Masaüstü\PerformansTakip\obj\Debug\net9.0\scopedcss\projectbundle\PerformansTakip.bundle.scp.css
-C:\Users\Acer\OneDrive\Masaüstü\PerformansTakip\obj\Debug\net9.0\compressed\xijw6xbgjg-b9sayid5wm.gz
 C:\Users\Acer\OneDrive\Masaüstü\PerformansTakip\obj\Debug\net9.0\compressed\olwxyjscjs-61n19gt1b8.gz
-C:\Users\Acer\OneDrive\Masaüstü\PerformansTakip\obj\Debug\net9.0\compressed\yfoa6a8znz-xtxxf3hu2r.gz
 C:\Users\Acer\OneDrive\Masaüstü\PerformansTakip\obj\Debug\net9.0\compressed\oz7eyx7dca-bqjiyaj88i.gz
 C:\Users\Acer\OneDrive\Masaüstü\PerformansTakip\obj\Debug\net9.0\compressed\n034ulxgxt-c2jlpeoesf.gz
 C:\Users\Acer\OneDrive\Masaüstü\PerformansTakip\obj\Debug\net9.0\compressed\ou8uklb6qa-erw9l3u2r3.gz
@@ -256,3 +254,5 @@ C:\Users\Acer\OneDrive\Masaüstü\PerformansTakip\obj\Debug\net9.0\refint\Perfor
 C:\Users\Acer\OneDrive\Masaüstü\PerformansTakip\obj\Debug\net9.0\PerformansTakip.pdb
 C:\Users\Acer\OneDrive\Masaüstü\PerformansTakip\obj\Debug\net9.0\PerformansTakip.genruntimeconfig.cache
 C:\Users\Acer\OneDrive\Masaüstü\PerformansTakip\obj\Debug\net9.0\ref\PerformansTakip.dll
+C:\Users\Acer\OneDrive\Masaüstü\PerformansTakip\obj\Debug\net9.0\compressed\xijw6xbgjg-z2wqs0gl4o.gz
+C:\Users\Acer\OneDrive\Masaüstü\PerformansTakip\obj\Debug\net9.0\compressed\yfoa6a8znz-5xpmxp83le.gz

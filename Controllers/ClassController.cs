@@ -59,7 +59,7 @@ namespace PerformansTakip.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Students(int id, string trackingType)
+        public async Task<IActionResult> Students(int id, string trackingType = "uniform")
         {
             try
             {
@@ -178,6 +178,131 @@ namespace PerformansTakip.Controllers
                 }
 
                 return Json(new { success = true, message = "Öğrenci başarıyla eklendi." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Hata: " + ex.Message });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> AddMultipleStudents([FromBody] AddMultipleStudentsRequest request)
+        {
+            try
+            {
+                // Önce sınıfı bul
+                var classItem = await _context.Classes.FindAsync(request.classId);
+                if (classItem == null)
+                {
+                    return Json(new { success = false, message = "Sınıf bulunamadı. ClassId: " + request.classId });
+                }
+
+                // Sınıfta öğrenci var mı kontrol et
+                var existingStudents = await _context.Students.CountAsync(s => s.ClassId == request.classId);
+                if (existingStudents > 0)
+                {
+                    return Json(new { success = false, message = "Bu sınıfta zaten öğrenciler bulunmaktadır." });
+                }
+
+                foreach (var fullName in request.studentNames)
+                {
+                    var nameParts = fullName.Split(' ');
+                    if (nameParts.Length >= 2)
+                    {
+                        var student = new Student
+                        {
+                            FirstName = nameParts[0],
+                            LastName = string.Join(" ", nameParts.Skip(1)),
+                            ClassId = request.classId,
+                            LastUpdated = DateTime.Now,
+                            UniformStatus = false,
+                            HomeworkStatus = false,
+                            PerformanceScore = 0
+                        };
+
+                        _context.Students.Add(student);
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+
+                // Sınıfın öğrenci sayısını güncelle
+                classItem.StudentCount = await _context.Students.CountAsync(s => s.ClassId == request.classId);
+                await _context.SaveChangesAsync();
+
+                return Json(new { success = true, message = "Öğrenciler başarıyla eklendi." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Hata: " + ex.Message });
+            }
+        }
+
+        public class AddMultipleStudentsRequest
+        {
+            public int classId { get; set; }
+            public List<string> studentNames { get; set; }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> DeleteAllStudents([FromForm] int classId)
+        {
+            try
+            {
+                // Önce sınıfı bul
+                var classItem = await _context.Classes.FindAsync(classId);
+                if (classItem == null)
+                {
+                    return Json(new { success = false, message = "Sınıf bulunamadı. ClassId: " + classId });
+                }
+
+                // Sınıftaki tüm öğrencileri bul ve sil
+                var students = await _context.Students
+                    .Where(s => s.ClassId == classId)
+                    .ToListAsync();
+
+                if (students.Any())
+                {
+                    _context.Students.RemoveRange(students);
+                    await _context.SaveChangesAsync();
+                }
+
+                // Sınıfın öğrenci sayısını sıfırla
+                classItem.StudentCount = 0;
+                await _context.SaveChangesAsync();
+
+                return Json(new { success = true, message = "Tüm öğrenciler başarıyla silindi." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Hata: " + ex.Message });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> DeleteStudent(int studentId)
+        {
+            try
+            {
+                var student = await _context.Students.FindAsync(studentId);
+                if (student == null)
+                {
+                    return Json(new { success = false, message = "Öğrenci bulunamadı." });
+                }
+
+                var classId = student.ClassId;
+                _context.Students.Remove(student);
+                await _context.SaveChangesAsync();
+
+                // Sınıfın öğrenci sayısını güncelle
+                var classItem = await _context.Classes.FindAsync(classId);
+                if (classItem != null)
+                {
+                    classItem.StudentCount = await _context.Students.CountAsync(s => s.ClassId == classId);
+                    await _context.SaveChangesAsync();
+                }
+
+                return Json(new { success = true, message = "Öğrenci başarıyla silindi." });
             }
             catch (Exception ex)
             {
