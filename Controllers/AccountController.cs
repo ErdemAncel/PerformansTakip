@@ -6,6 +6,10 @@ using PerformansTakip.Models;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
+using PerformansTakip.ViewModels;
+using PerformansTakip.Services;
+using Newtonsoft.Json;
 
 namespace PerformansTakip.Controllers
 {
@@ -16,12 +20,14 @@ namespace PerformansTakip.Controllers
         private readonly IMemoryCache _cache;
         private const int MAX_LOGIN_ATTEMPTS = 3;
         private const int LOCKOUT_DURATION_MINUTES = 1;
+        private readonly ILogger<AccountController> _logger;
 
-        public AccountController(IConfiguration configuration, ApplicationDbContext context, IMemoryCache cache)
+        public AccountController(IConfiguration configuration, ApplicationDbContext context, IMemoryCache cache, ILogger<AccountController> logger)
         {
             _configuration = configuration;
             _context = context;
             _cache = cache;
+            _logger = logger;
         }
 
         [HttpGet]
@@ -150,24 +156,39 @@ namespace PerformansTakip.Controllers
 
                     if (model.CurrentPassword == currentPassword)
                     {
-                        _configuration["AdminCredentials:Password"] = model.NewPassword;
-                        
+                        // Veritabanındaki admin kaydını güncelle
                         var admin = await _context.Admins.FirstOrDefaultAsync(a => a.Username == adminUsername);
                         if (admin != null)
                         {
                             admin.Password = model.NewPassword;
                             await _context.SaveChangesAsync();
+
+                            // appsettings.json dosyasını güncelle
+                            var appSettingsPath = Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json");
+                            var json = System.IO.File.ReadAllText(appSettingsPath);
+                            dynamic jsonObj = Newtonsoft.Json.JsonConvert.DeserializeObject(json);
+                            jsonObj["AdminCredentials"]["Password"] = model.NewPassword;
+                            string output = Newtonsoft.Json.JsonConvert.SerializeObject(jsonObj, Newtonsoft.Json.Formatting.Indented);
+                            System.IO.File.WriteAllText(appSettingsPath, output);
+
+                            TempData["SuccessMessage"] = "Şifreniz başarıyla değiştirildi.";
+                            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                            return RedirectToAction("Login");
                         }
-
-                        TempData["SuccessMessage"] = "Şifreniz başarıyla değiştirildi.";
-                        return RedirectToAction("Login");
+                        else
+                        {
+                            ModelState.AddModelError(string.Empty, "Admin kullanıcısı bulunamadı.");
+                        }
                     }
-
-                    ModelState.AddModelError(string.Empty, "Mevcut şifre yanlış");
+                    else
+                    {
+                        ModelState.AddModelError(string.Empty, "Mevcut şifre yanlış.");
+                    }
                 }
                 catch (Exception ex)
                 {
                     ModelState.AddModelError(string.Empty, "Şifre değiştirme sırasında bir hata oluştu: " + ex.Message);
+                    _logger.LogError(ex, "Şifre değiştirme hatası");
                 }
             }
 
@@ -192,21 +213,38 @@ namespace PerformansTakip.Controllers
 
                     if (admin != null && admin.Email == model.Email)
                     {
+                        // Yeni şifre oluştur
                         var newPassword = GenerateRandomPassword();
+                        
+                        // Şifreyi güncelle
                         _configuration["AdminCredentials:Password"] = newPassword;
                         admin.Password = newPassword;
                         await _context.SaveChangesAsync();
 
-                        // Burada e-posta gönderme işlemi yapılabilir
-                        TempData["SuccessMessage"] = "Yeni şifreniz e-posta adresinize gönderildi.";
-                        return RedirectToAction("Login");
+                        // E-posta gönderme işlemi
+                        try
+                        {
+                            var emailService = new EmailService(_configuration);
+                            await emailService.SendPasswordResetEmail(admin.Email, newPassword);
+                            
+                            TempData["SuccessMessage"] = "Yeni şifreniz e-posta adresinize gönderildi.";
+                            return RedirectToAction("Login");
+                        }
+                        catch (Exception ex)
+                        {
+                            ModelState.AddModelError(string.Empty, "E-posta gönderilirken bir hata oluştu. Lütfen sistem yöneticisi ile iletişime geçin.");
+                            _logger.LogError(ex, "E-posta gönderme hatası");
+                        }
                     }
-
-                    ModelState.AddModelError(string.Empty, "E-posta adresi bulunamadı");
+                    else
+                    {
+                        ModelState.AddModelError(string.Empty, "Bu e-posta adresi ile kayıtlı bir hesap bulunamadı.");
+                    }
                 }
                 catch (Exception ex)
                 {
                     ModelState.AddModelError(string.Empty, "Şifre sıfırlama sırasında bir hata oluştu: " + ex.Message);
+                    _logger.LogError(ex, "Şifre sıfırlama hatası");
                 }
             }
 
@@ -215,9 +253,9 @@ namespace PerformansTakip.Controllers
 
         private string GenerateRandomPassword()
         {
-            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+";
             var random = new Random();
-            return new string(Enumerable.Repeat(chars, 8)
+            return new string(Enumerable.Repeat(chars, 12)
                 .Select(s => s[random.Next(s.Length)]).ToArray());
         }
     }
