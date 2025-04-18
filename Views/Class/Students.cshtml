@@ -7,62 +7,68 @@
 }
 
 <style>
-    /* Toast Bildirimleri */
-    .toast-container {
-        z-index: 1050;
-    }
-    .toast {
-        min-width: 350px;
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-        border-radius: 0.5rem;
+    /* Progress Bar Bildirimleri */
+    .progress-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        width: 350px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         overflow: hidden;
-        margin-bottom: 0.5rem;
+        display: none;
     }
-    .toast.success {
+    
+    .progress-header {
+        padding: 12px 15px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .progress-body {
+        padding: 15px;
+    }
+    
+    .progress {
+        height: 20px;
+        margin: 0;
+        border-radius: 0;
+        background-color: #f0f0f0;
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+    
+    .progress-bar {
+        height: 100%;
+        background-color: #17a2b8;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        transition: width 0.3s ease;
+    }
+    
+    .progress-success .progress-bar {
         background-color: #28a745;
     }
-    .toast.error {
+    
+    .progress-error .progress-bar {
         background-color: #dc3545;
     }
-    .toast.warning {
-        background-color: #ffc107;
-    }
-    .toast.info {
+    
+    .progress-info .progress-bar {
         background-color: #17a2b8;
     }
-    .toast-icon {
-        font-size: 1.5rem;
-        color: white;
+    
+    .progress-warning .progress-bar {
+        background-color: #ffc107;
     }
-    .toast-body {
-        font-size: 0.95rem;
-        color: white;
-    }
-    .progress {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: rgba(255,255,255,0.2);
-        border-radius: 0;
-    }
-    .progress-bar {
-        background-color: white;
-        transition: width 2s linear;
-    }
-    @@keyframes slideIn {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-    .toast {
-        animation: slideIn 0.3s ease-out;
+    
+    .progress-close {
+        cursor: pointer;
+        background: none;
+        border: none;
+        font-size: 1.2rem;
     }
 
     /* Genel Tasarım İyileştirmeleri */
@@ -132,6 +138,19 @@
         box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
     }
 </style>
+
+<div class="progress-container" id="progressContainer">
+    <div class="progress-header">
+        <strong id="progressTitle">İşlem Devam Ediyor</strong>
+        <button type="button" class="progress-close" id="progressClose">&times;</button>
+    </div>
+    <div class="progress-body">
+        <div id="progressMessage">İşlem başlatılıyor...</div>
+        <div class="progress mt-3">
+            <div class="progress-bar" id="progressBar" role="progressbar" style="width: 0%"></div>
+        </div>
+    </div>
+</div>
 
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -316,21 +335,27 @@ Mehmet Kaya"></textarea>
                     LastName: $('#lastName').val()
                 };
                 
+                const progressInterval = showProgress('Öğrenci ekleniyor...', 'info');
+                
                 $.ajax({
                     url: '/Class/AddStudent',
                     type: 'POST',
                     contentType: 'application/json',
                     data: JSON.stringify(student),
                     success: function(response) {
+                        clearInterval(progressInterval);
                         if (response.success) {
                             $('#addStudentModal').modal('hide');
-                            location.reload();
+                            completeProgress(true, 'Öğrenci başarıyla eklendi!');
+                            setTimeout(() => location.reload(), 1500);
                         } else {
-                            alert(response.message);
+                            completeProgress(false, 'Hata: ' + response.message);
                         }
                     },
                     error: function(xhr, status, error) {
-                        alert('Bir hata oluştu: ' + error);
+                        clearInterval(progressInterval);
+                        console.error('Error:', error);
+                        completeProgress(false, 'Bir hata oluştu! Lütfen tekrar deneyin.');
                     }
                 });
             });
@@ -402,66 +427,52 @@ Mehmet Kaya"></textarea>
                     }
                 }
             });
+
+            // Progress bar kapatma butonu
+            $('#progressClose').click(function() {
+                $('#progressContainer').hide();
+            });
         });
 
-        function showToast(message, type = 'info') {
-            const toast = document.createElement('div');
-            toast.className = `toast align-items-center text-white ${type} border-0 position-fixed top-0 end-0 m-3`;
-            toast.setAttribute('role', 'alert');
-            toast.setAttribute('aria-live', 'assertive');
-            toast.setAttribute('aria-atomic', 'true');
+        // Progress bar fonksiyonları
+        function showProgress(message, type = 'info') {
+            $('#progressTitle').text('İşlem Devam Ediyor');
+            $('#progressMessage').text(message);
+            $('#progressContainer').removeClass('progress-success progress-error progress-info progress-warning')
+                .addClass('progress-' + type);
+            $('#progressBar').css('width', '0%');
+            $('#progressContainer').show();
             
-            const icon = type === 'success' ? 'check-circle' :
-                        type === 'error' ? 'exclamation-circle' :
-                        type === 'warning' ? 'exclamation-triangle' : 'info-circle';
-            
-            const delay = type === 'success' ? 2000 : 3000;
-            
-            toast.innerHTML = `
-                <div class="position-relative">
-                    <div class="progress">
-                        <div class="progress-bar" role="progressbar" style="width: 100%"></div>
-                    </div>
-                    <div class="d-flex align-items-center p-3">
-                        <div class="toast-icon me-3">
-                            <i class="fas fa-${icon}"></i>
-                        </div>
-                        <div class="toast-body flex-grow-1">
-                            ${message}
-                        </div>
-                        <button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="toast"></button>
-                    </div>
-                </div>
-            `;
-            
-            let toastContainer = document.querySelector('.toast-container');
-            if (!toastContainer) {
-                toastContainer = document.createElement('div');
-                toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
-                document.body.appendChild(toastContainer);
-            }
-            
-            toastContainer.appendChild(toast);
-            
-            const bsToast = new bootstrap.Toast(toast, {
-                autohide: true,
-                delay: delay
-            });
-            
-            const progressBar = toast.querySelector('.progress-bar');
-            progressBar.style.width = '0%';
-            setTimeout(() => {
-                progressBar.style.width = '100%';
-            }, 10);
-            
-            bsToast.show();
-            
-            toast.addEventListener('hidden.bs.toast', function() {
-                toast.remove();
-                if (toastContainer.children.length === 0) {
-                    toastContainer.remove();
+            // Progress bar'ı yavaşça ilerlet
+            let progress = 0;
+            const interval = setInterval(function() {
+                progress += 1;
+                if (progress <= 100) {
+                    $('#progressBar').css('width', progress + '%');
+                } else {
+                    clearInterval(interval);
                 }
-            });
+            }, 30);
+            
+            return interval;
+        }
+        
+        function completeProgress(success = true, message = '') {
+            const type = success ? 'success' : 'error';
+            const title = success ? 'İşlem Tamamlandı' : 'Hata Oluştu';
+            
+            $('#progressTitle').text(title);
+            if (message) {
+                $('#progressMessage').text(message);
+            }
+            $('#progressContainer').removeClass('progress-success progress-error progress-info progress-warning')
+                .addClass('progress-' + type);
+            $('#progressBar').css('width', '100%');
+            
+            // 2 saniye sonra progress bar'ı gizle
+            setTimeout(function() {
+                $('#progressContainer').hide();
+            }, 2000);
         }
 
         function addBulkStudents() {
@@ -469,7 +480,7 @@ Mehmet Kaya"></textarea>
             const studentNamesText = $('#bulkStudentNames').val().trim();
             
             if (!studentNamesText) {
-                showToast('Lütfen en az bir öğrenci bilgisi girin.', 'warning');
+                alert('Lütfen en az bir öğrenci bilgisi girin.');
                 return;
             }
 
@@ -478,21 +489,21 @@ Mehmet Kaya"></textarea>
                 .filter(name => name.length > 0);
 
             if (studentNames.length === 0) {
-                showToast('Lütfen geçerli öğrenci bilgileri girin.', 'warning');
+                alert('Lütfen geçerli öğrenci bilgileri girin.');
                 return;
             }
 
             const invalidNames = studentNames.filter(name => {
-                const parts = name.split(' ');
+                const parts = name.split('');
                 return parts.length < 2 || parts.some(part => part.length < 2);
             });
 
             if (invalidNames.length > 0) {
-                showToast(`Geçersiz öğrenci formatı: ${invalidNames.join(', ')}. Her öğrenci için ad ve soyad giriniz.`, 'error');
+                alert(`Geçersiz öğrenci formatı: ${invalidNames.join(', ')}. Her öğrenci için ad ve soyad giriniz.`);
                 return;
             }
 
-            showToast('Öğrenciler ekleniyor...', 'info');
+            const progressInterval = showProgress('Öğrenciler ekleniyor...', 'info');
 
             $.ajax({
                 url: '/Class/AddMultipleStudents',
@@ -503,40 +514,58 @@ Mehmet Kaya"></textarea>
                 }),
                 contentType: 'application/json',
                 success: function(response) {
+                    clearInterval(progressInterval);
                     if (response.success) {
                         $('#bulkAddModal').modal('hide');
-                        showToast('Öğrenciler başarıyla eklendi!', 'success');
+                        completeProgress(true, 'Öğrenciler başarıyla eklendi!');
                         setTimeout(() => location.reload(), 1500);
                     } else {
-                        showToast('Hata: ' + response.message, 'error');
+                        completeProgress(false, 'Hata: ' + response.message);
                     }
                 },
                 error: function(xhr, status, error) {
+                    clearInterval(progressInterval);
                     console.error('Error:', error);
-                    showToast('Bir hata oluştu! Lütfen tekrar deneyin.', 'error');
+                    completeProgress(false, 'Bir hata oluştu! Lütfen tekrar deneyin.');
                 }
             });
         }
 
         function updateUniformStatus(studentId, status) {
+            const progressInterval = showProgress('Kıyafet durumu güncelleniyor...', 'info');
+
             $.post('/Class/UpdateUniform', { studentId: studentId, status: status })
                 .done(function(response) {
+                    clearInterval(progressInterval);
                     if (response.success) {
-                        location.reload();
+                        completeProgress(true, 'Kıyafet durumu başarıyla güncellendi');
+                        setTimeout(() => location.reload(), 1500);
                     } else {
-                        alert('Güncelleme başarısız: ' + response.message);
+                        completeProgress(false, 'Güncelleme başarısız: ' + response.message);
                     }
+                })
+                .fail(function() {
+                    clearInterval(progressInterval);
+                    completeProgress(false, 'Bir hata oluştu');
                 });
         }
 
         function updateHomeworkStatus(studentId, status) {
+            const progressInterval = showProgress('Ödev durumu güncelleniyor...', 'info');
+
             $.post('/Class/UpdateHomework', { studentId: studentId, status: status })
                 .done(function(response) {
+                    clearInterval(progressInterval);
                     if (response.success) {
-                        location.reload();
+                        completeProgress(true, 'Ödev durumu başarıyla güncellendi');
+                        setTimeout(() => location.reload(), 1500);
                     } else {
-                        alert('Güncelleme başarısız: ' + response.message);
+                        completeProgress(false, 'Güncelleme başarısız: ' + response.message);
                     }
+                })
+                .fail(function() {
+                    clearInterval(progressInterval);
+                    completeProgress(false, 'Bir hata oluştu');
                 });
         }
 
@@ -545,20 +574,24 @@ Mehmet Kaya"></textarea>
             
             const numericScore = parseInt(score);
             if (isNaN(numericScore) || numericScore < 0 || numericScore > 100) {
-                showToast('Lütfen 0-100 arası geçerli bir puan girin', 'error');
+                alert('Lütfen 0-100 arası geçerli bir puan girin');
                 return;
             }
 
+            const progressInterval = showProgress('Puan güncelleniyor...', 'info');
+
             $.post('/Class/UpdatePerformance', { studentId: studentId, score: numericScore })
                 .done(function(response) {
+                    clearInterval(progressInterval);
                     if (response.success) {
-                        showToast('Puan başarıyla güncellendi', 'success');
+                        completeProgress(true, 'Puan başarıyla güncellendi');
                     } else {
-                        showToast('Güncelleme başarısız: ' + response.message, 'error');
+                        completeProgress(false, 'Güncelleme başarısız: ' + response.message);
                     }
                 })
                 .fail(function() {
-                    showToast('Bir hata oluştu', 'error');
+                    clearInterval(progressInterval);
+                    completeProgress(false, 'Bir hata oluştu');
                 });
         }
 
@@ -567,13 +600,21 @@ Mehmet Kaya"></textarea>
                 return;
             }
 
+            const progressInterval = showProgress('Öğrenci siliniyor...', 'info');
+
             $.post('/Class/DeleteStudent', { studentId: studentId })
                 .done(function(response) {
+                    clearInterval(progressInterval);
                     if (response.success) {
-                        location.reload();
+                        completeProgress(true, 'Öğrenci başarıyla silindi!');
+                        setTimeout(() => location.reload(), 1500);
                     } else {
-                        alert('Silme işlemi başarısız: ' + response.message);
+                        completeProgress(false, 'Silme işlemi başarısız: ' + response.message);
                     }
+                })
+                .fail(function() {
+                    clearInterval(progressInterval);
+                    completeProgress(false, 'Bir hata oluştu! Lütfen tekrar deneyin.');
                 });
         }
 
@@ -583,21 +624,25 @@ Mehmet Kaya"></textarea>
             }
 
             const classId = @ViewBag.ClassId;
+            const progressInterval = showProgress('Tüm öğrenciler siliniyor...', 'info');
 
             $.ajax({
                 url: '/Class/DeleteAllStudents',
                 type: 'POST',
                 data: { classId: classId },
                 success: function(response) {
+                    clearInterval(progressInterval);
                     if (response.success) {
-                        location.reload();
+                        completeProgress(true, 'Tüm öğrenciler başarıyla silindi!');
+                        setTimeout(() => location.reload(), 1500);
                     } else {
-                        alert('Hata: ' + response.message);
+                        completeProgress(false, 'Hata: ' + response.message);
                     }
                 },
                 error: function(xhr, status, error) {
+                    clearInterval(progressInterval);
                     console.error('Error:', error);
-                    alert('Bir hata oluştu!');
+                    completeProgress(false, 'Bir hata oluştu! Lütfen tekrar deneyin.');
                 }
             });
         }
