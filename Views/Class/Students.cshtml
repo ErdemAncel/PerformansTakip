@@ -111,6 +111,85 @@
         margin-bottom: 12px;
     }
     
+    /* İşlem Durumu Göstergesi */
+    .status-indicator {
+        display: flex;
+        align-items: center;
+        margin-top: 8px;
+        font-size: 12px;
+        color: #666;
+    }
+    
+    .status-icon {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        margin-right: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        font-weight: bold;
+        color: white;
+        opacity: 0;
+        transform: scale(0);
+        transition: all 0.3s ease;
+    }
+    
+    .status-icon.visible {
+        opacity: 1;
+        transform: scale(1);
+    }
+    
+    .status-success {
+        background-color: #10b981;
+    }
+    
+    .status-error {
+        background-color: #ef4444;
+    }
+    
+    .status-info {
+        background-color: #3b82f6;
+    }
+    
+    .status-warning {
+        background-color: #f59e0b;
+    }
+    
+    /* Animasyonlu Tik */
+    @@keyframes checkmark {
+        0% {
+            height: 0;
+            width: 0;
+            opacity: 0;
+        }
+        20% {
+            height: 0;
+            width: 2px;
+            opacity: 1;
+        }
+        40% {
+            height: 10px;
+            width: 2px;
+            opacity: 1;
+        }
+        100% {
+            height: 10px;
+            width: 2px;
+            opacity: 1;
+        }
+    }
+    
+    @@keyframes checkmark-rotate {
+        0% {
+            transform: rotate(45deg);
+        }
+        100% {
+            transform: rotate(45deg);
+        }
+    }
+    
     /* Animasyonlar */
     @@keyframes slideIn {
         from {
@@ -217,6 +296,10 @@
         <div id="progressMessage">İşlem başlatılıyor...</div>
         <div class="progress">
             <div class="progress-bar" id="progressBar" role="progressbar" style="width: 0%"></div>
+        </div>
+        <div class="status-indicator" id="statusIndicator">
+            <div class="status-icon status-info">i</div>
+            <span id="statusText">İşlem devam ediyor</span>
         </div>
     </div>
 </div>
@@ -511,6 +594,9 @@ Mehmet Kaya"></textarea>
                 .addClass('progress-' + type + ' visible');
             $('#progressBar').css('width', '0%');
             
+            // Durum göstergesini güncelle
+            updateStatusIndicator(type, 'İşlem devam ediyor');
+            
             // Progress bar'ı yavaşça ilerlet
             let progress = 0;
             const interval = setInterval(function() {
@@ -537,10 +623,37 @@ Mehmet Kaya"></textarea>
                 .addClass('progress-' + type);
             $('#progressBar').css('width', '100%');
             
+            // Durum göstergesini güncelle ve animasyonlu göster
+            updateStatusIndicator(type, success ? 'İşlem başarıyla tamamlandı' : 'İşlem başarısız oldu');
+            
             // 2 saniye sonra progress bar'ı gizle
             setTimeout(function() {
                 $('#progressContainer').removeClass('visible');
             }, 2000);
+        }
+        
+        function updateStatusIndicator(type, text) {
+            // Tüm durum sınıflarını kaldır
+            $('#statusIndicator .status-icon').removeClass('status-success status-error status-info status-warning visible');
+            
+            // Yeni durum sınıfını ekle
+            $('#statusIndicator .status-icon').addClass('status-' + type);
+            
+            // Durum metnini güncelle
+            $('#statusText').text(text);
+            
+            // Durum ikonunu güncelle
+            let iconText = 'i';
+            if (type === 'success') iconText = '✓';
+            if (type === 'error') iconText = '✕';
+            if (type === 'warning') iconText = '!';
+            
+            $('#statusIndicator .status-icon').text(iconText);
+            
+            // Animasyonlu göster
+            setTimeout(function() {
+                $('#statusIndicator .status-icon').addClass('visible');
+            }, 300);
         }
 
         function addBulkStudents() {
