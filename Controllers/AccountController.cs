@@ -35,6 +35,44 @@ namespace PerformansTakip.Controllers
             _logger = logger;
         }
 
+        // Test metodu - Tüm adminleri listele
+        [HttpGet]
+        public IActionResult ListAdmins()
+        {
+            var admins = _context.Admins.ToList();
+            return Json(new { count = admins.Count, admins = admins });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Profile()
+        {
+            if (!User.Identity.IsAuthenticated)
+            {
+                return RedirectToAction("Login");
+            }
+
+            var username = User.Identity.Name;
+            var admin = await _context.Admins
+                .FirstOrDefaultAsync(a => a.Username == username);
+
+            if (admin == null)
+            {
+                return NotFound();
+            }
+
+            var viewModel = new ProfileViewModel
+            {
+                Username = admin.Username,
+                Email = admin.Email,
+                FirstName = admin.FirstName,
+                LastName = admin.LastName,
+                LastLogin = admin.LastLogin,
+                CreatedAt = admin.CreatedAt
+            };
+
+            return View(viewModel);
+        }
+
         [HttpGet]
         public IActionResult Login()
         {
@@ -48,7 +86,6 @@ namespace PerformansTakip.Controllers
         [HttpPost]
         public async Task<IActionResult> Login(Admin model)
         {
-            // Boş alan kontrolü
             if (string.IsNullOrEmpty(model.Username))
             {
                 ModelState.AddModelError("Username", "Kullanıcı adı boş bırakılamaz!");
@@ -61,49 +98,32 @@ namespace PerformansTakip.Controllers
                 return View(model);
             }
 
-            var adminUsername = _configuration["AdminCredentials:Username"];
-            var adminPassword = _configuration["AdminCredentials:Password"];
-
-            // Kullanıcı adı kontrolü
-            if (model.Username != adminUsername)
-            {
-                ModelState.AddModelError("Username", "Kullanıcı adı hatalı!");
-                return View(model);
-            }
-
-            // Şifre kontrolü
-            if (model.Password != adminPassword)
-            {
-                ModelState.AddModelError("Password", "Şifre hatalı!");
-                return View(model);
-            }
-
             try
             {
-                // Admin kaydını veritabanında kontrol et veya oluştur
-                var admin = await _context.Admins.FirstOrDefaultAsync(a => a.Username == model.Username);
+                var admin = await _context.Admins
+                    .FirstOrDefaultAsync(a => a.Username == model.Username);
+
                 if (admin == null)
                 {
-                    admin = new Admin
-                    {
-                        Username = model.Username,
-                        Password = model.Password,
-                        Email = "admin@performanstakip.com",
-                        LastLogin = DateTime.Now
-                    };
-                    _context.Admins.Add(admin);
+                    ModelState.AddModelError("Username", "Kullanıcı adı hatalı!");
+                    return View(model);
                 }
-                else
+
+                if (admin.Password != model.Password)
                 {
-                    admin.LastLogin = DateTime.Now;
+                    ModelState.AddModelError("Password", "Şifre hatalı!");
+                    return View(model);
                 }
+
+                admin.LastLogin = DateTime.Now;
                 await _context.SaveChangesAsync();
 
-                // Kimlik doğrulama bilgilerini oluştur
                 var claims = new List<Claim>
                 {
                     new Claim(ClaimTypes.Name, admin.Username),
-                    new Claim(ClaimTypes.Role, "Admin")
+                    new Claim(ClaimTypes.Role, "Admin"),
+                    new Claim(ClaimTypes.Email, admin.Email),
+                    new Claim("AdminId", admin.Id.ToString())
                 };
 
                 var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
@@ -122,9 +142,67 @@ namespace PerformansTakip.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Giriş hatası");
                 ModelState.AddModelError(string.Empty, "Giriş sırasında bir hata oluştu: " + ex.Message);
                 return View(model);
             }
+        }
+
+        [HttpGet]
+        public IActionResult Register()
+        {
+            if (User.Identity.IsAuthenticated)
+            {
+                return RedirectToAction("Index", "Class");
+            }
+            return View();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Register(RegisterViewModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    // Kullanıcı adı kontrolü
+                    if (await _context.Admins.AnyAsync(a => a.Username == model.Username))
+                    {
+                        ModelState.AddModelError("Username", "Bu kullanıcı adı zaten kullanılıyor.");
+                        return View(model);
+                    }
+
+                    // E-posta kontrolü
+                    if (await _context.Admins.AnyAsync(a => a.Email == model.Email))
+                    {
+                        ModelState.AddModelError("Email", "Bu e-posta adresi zaten kullanılıyor.");
+                        return View(model);
+                    }
+
+                    var admin = new Admin
+                    {
+                        Username = model.Username,
+                        Password = model.Password,
+                        Email = model.Email,
+                        FirstName = model.FirstName,
+                        LastName = model.LastName,
+                        CreatedAt = DateTime.Now
+                    };
+
+                    _context.Admins.Add(admin);
+                    await _context.SaveChangesAsync();
+
+                    TempData["SuccessMessage"] = "Kayıt işlemi başarıyla tamamlandı. Şimdi giriş yapabilirsiniz.";
+                    return RedirectToAction(nameof(Login));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Kayıt hatası");
+                    ModelState.AddModelError(string.Empty, "Kayıt sırasında bir hata oluştu: " + ex.Message);
+                }
+            }
+
+            return View(model);
         }
 
         [HttpGet]

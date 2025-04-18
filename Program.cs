@@ -31,7 +31,12 @@ if (!Directory.Exists(dataFolder))
 
 var dbPath = Path.Combine(dataFolder, "PerformansTakip.db");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite($"Data Source={dbPath}"));
+{
+    options.UseSqlite($"Data Source={dbPath}");
+    // Detaylı hata mesajlarını etkinleştir
+    options.EnableDetailedErrors();
+    options.EnableSensitiveDataLogging();
+});
 
 builder.Services.AddScoped<EmailService>();
 
@@ -41,21 +46,56 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    db.Database.EnsureDeleted(); // Veritabanını tamamen sil
-    db.Database.EnsureCreated(); // Yeni veritabanı oluştur
-
-    // Admin kullanıcısını kesin olarak oluştur
-    if (!db.Admins.Any())
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    
+    try
     {
-        var admin = new Admin
+        // Veritabanı bağlantısını kontrol et
+        if (db.Database.CanConnect())
         {
-            Username = "admin",
-            Password = "admin1234",
-            Email = "ancellerdem1234@gmail.com",
-            LastLogin = null
-        };
-        db.Admins.Add(admin);
-        db.SaveChanges();
+            logger.LogInformation("Veritabanına başarıyla bağlanıldı.");
+            
+            // Bekleyen migration var mı kontrol et
+            var pendingMigrations = db.Database.GetPendingMigrations();
+            if (pendingMigrations.Any())
+            {
+                logger.LogInformation($"Bekleyen {pendingMigrations.Count()} migration bulundu. Uygulanıyor...");
+                db.Database.Migrate();
+            }
+            
+            // Admin kullanıcısı var mı kontrol et
+            if (!db.Admins.Any())
+            {
+                logger.LogInformation("Admin kullanıcısı bulunamadı. Varsayılan admin oluşturuluyor...");
+                var admin = new Admin
+                {
+                    Username = "admin",
+                    Password = "admin1234",
+                    Email = "admin@performanstakip.com",
+                    FirstName = "Admin",
+                    LastName = "User",
+                    CreatedAt = DateTime.Now
+                };
+                db.Admins.Add(admin);
+                db.SaveChanges();
+                logger.LogInformation("Varsayılan admin kullanıcısı oluşturuldu.");
+            }
+            else
+            {
+                var adminCount = db.Admins.Count();
+                logger.LogInformation($"Sistemde {adminCount} admin kullanıcısı bulunuyor.");
+            }
+        }
+        else
+        {
+            logger.LogWarning("Veritabanına bağlanılamadı. Yeni veritabanı oluşturuluyor...");
+            db.Database.EnsureCreated();
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Veritabanı işlemleri sırasında bir hata oluştu.");
+        throw;
     }
 }
 

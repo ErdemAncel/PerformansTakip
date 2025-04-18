@@ -20,7 +20,10 @@ namespace PerformansTakip.Migrations
                     Username = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
                     Password = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
                     Email = table.Column<string>(type: "TEXT", nullable: false),
-                    LastLogin = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    LastLogin = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    FirstName = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
+                    LastName = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -33,8 +36,10 @@ namespace PerformansTakip.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                    Description = table.Column<string>(type: "TEXT", nullable: false)
+                    Name = table.Column<string>(type: "TEXT", nullable: false),
+                    Grade = table.Column<int>(type: "INTEGER", nullable: false),
+                    Section = table.Column<string>(type: "TEXT", maxLength: 1, nullable: false),
+                    StudentCount = table.Column<int>(type: "INTEGER", nullable: false, defaultValue: 0)
                 },
                 constraints: table =>
                 {
@@ -47,14 +52,13 @@ namespace PerformansTakip.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    FirstName = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                    LastName = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
+                    FirstName = table.Column<string>(type: "TEXT", nullable: false),
+                    LastName = table.Column<string>(type: "TEXT", nullable: false),
                     ClassId = table.Column<int>(type: "INTEGER", nullable: false),
                     UniformStatus = table.Column<bool>(type: "INTEGER", nullable: false),
                     HomeworkStatus = table.Column<bool>(type: "INTEGER", nullable: false),
                     PerformanceScore = table.Column<int>(type: "INTEGER", nullable: false),
-                    LastUpdated = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    Notes = table.Column<string>(type: "TEXT", nullable: false)
+                    LastUpdated = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -66,11 +70,6 @@ namespace PerformansTakip.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
-
-            migrationBuilder.InsertData(
-                table: "Admins",
-                columns: new[] { "Id", "Email", "LastLogin", "Password", "Username" },
-                values: new object[] { 1, "admin@example.com", new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "admin123", "admin" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Students_ClassId",
