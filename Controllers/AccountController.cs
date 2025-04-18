@@ -10,6 +10,11 @@ using Microsoft.Extensions.Logging;
 using PerformansTakip.ViewModels;
 using PerformansTakip.Services;
 using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using System.IO;
 
 namespace PerformansTakip.Controllers
 {
@@ -152,24 +157,16 @@ namespace PerformansTakip.Controllers
                 try
                 {
                     var adminUsername = _configuration["AdminCredentials:Username"];
-                    var currentPassword = _configuration["AdminCredentials:Password"];
+                    var admin = await _context.Admins.FirstOrDefaultAsync(a => a.Username == adminUsername);
 
-                    if (model.CurrentPassword == currentPassword)
+                    if (admin != null)
                     {
-                        // Veritabanındaki admin kaydını güncelle
-                        var admin = await _context.Admins.FirstOrDefaultAsync(a => a.Username == adminUsername);
-                        if (admin != null)
+                        // Mevcut şifre kontrolü
+                        if (admin.Password == model.CurrentPassword)
                         {
+                            // Yeni şifreyi güncelle
                             admin.Password = model.NewPassword;
                             await _context.SaveChangesAsync();
-
-                            // appsettings.json dosyasını güncelle
-                            var appSettingsPath = Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json");
-                            var json = System.IO.File.ReadAllText(appSettingsPath);
-                            dynamic jsonObj = Newtonsoft.Json.JsonConvert.DeserializeObject(json);
-                            jsonObj["AdminCredentials"]["Password"] = model.NewPassword;
-                            string output = Newtonsoft.Json.JsonConvert.SerializeObject(jsonObj, Newtonsoft.Json.Formatting.Indented);
-                            System.IO.File.WriteAllText(appSettingsPath, output);
 
                             TempData["SuccessMessage"] = "Şifreniz başarıyla değiştirildi.";
                             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
@@ -177,18 +174,18 @@ namespace PerformansTakip.Controllers
                         }
                         else
                         {
-                            ModelState.AddModelError(string.Empty, "Admin kullanıcısı bulunamadı.");
+                            ModelState.AddModelError(string.Empty, "Mevcut şifre yanlış.");
                         }
                     }
                     else
                     {
-                        ModelState.AddModelError(string.Empty, "Mevcut şifre yanlış.");
+                        ModelState.AddModelError(string.Empty, "Admin kullanıcısı bulunamadı.");
                     }
                 }
                 catch (Exception ex)
                 {
-                    ModelState.AddModelError(string.Empty, "Şifre değiştirme sırasında bir hata oluştu: " + ex.Message);
                     _logger.LogError(ex, "Şifre değiştirme hatası");
+                    ModelState.AddModelError(string.Empty, "Şifre değiştirme sırasında bir hata oluştu.");
                 }
             }
 
@@ -208,43 +205,75 @@ namespace PerformansTakip.Controllers
             {
                 try
                 {
-                    var adminUsername = _configuration["AdminCredentials:Username"];
-                    var admin = await _context.Admins.FirstOrDefaultAsync(a => a.Username == adminUsername);
+                    var admin = await _context.Admins
+                        .FirstOrDefaultAsync(a => a.Username.ToLower() == model.Username.ToLower());
 
-                    if (admin != null && admin.Email == model.Email)
+                    if (admin != null)
                     {
-                        // Yeni şifre oluştur
-                        var newPassword = GenerateRandomPassword();
-                        
-                        // Şifreyi güncelle
-                        _configuration["AdminCredentials:Password"] = newPassword;
-                        admin.Password = newPassword;
-                        await _context.SaveChangesAsync();
-
-                        // E-posta gönderme işlemi
-                        try
-                        {
-                            var emailService = new EmailService(_configuration);
-                            await emailService.SendPasswordResetEmail(admin.Email, newPassword);
-                            
-                            TempData["SuccessMessage"] = "Yeni şifreniz e-posta adresinize gönderildi.";
-                            return RedirectToAction("Login");
-                        }
-                        catch (Exception ex)
-                        {
-                            ModelState.AddModelError(string.Empty, "E-posta gönderilirken bir hata oluştu. Lütfen sistem yöneticisi ile iletişime geçin.");
-                            _logger.LogError(ex, "E-posta gönderme hatası");
-                        }
+                        // Kullanıcı adı doğrulandı, şifre sıfırlama formuna yönlendir
+                        return RedirectToAction("ResetPassword", new { username = model.Username });
                     }
                     else
                     {
-                        ModelState.AddModelError(string.Empty, "Bu e-posta adresi ile kayıtlı bir hesap bulunamadı.");
+                        ModelState.AddModelError(string.Empty, "Bu kullanıcı adı ile kayıtlı bir hesap bulunamadı.");
                     }
                 }
                 catch (Exception ex)
                 {
-                    ModelState.AddModelError(string.Empty, "Şifre sıfırlama sırasında bir hata oluştu: " + ex.Message);
                     _logger.LogError(ex, "Şifre sıfırlama hatası");
+                    ModelState.AddModelError(string.Empty, "Şifre sıfırlama sırasında bir hata oluştu.");
+                }
+            }
+
+            return View(model);
+        }
+
+        [HttpGet]
+        public IActionResult ResetPassword(string username)
+        {
+            var model = new ResetPasswordViewModel
+            {
+                Username = username
+            };
+            return View(model);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var admin = await _context.Admins
+                        .FirstOrDefaultAsync(a => a.Username.ToLower() == model.Username.ToLower());
+
+                    if (admin != null)
+                    {
+                        // Veritabanındaki şifreyi güncelle
+                        admin.Password = model.NewPassword;
+                        await _context.SaveChangesAsync();
+
+                        // appsettings.json dosyasını güncelle
+                        var appSettingsPath = Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json");
+                        var json = System.IO.File.ReadAllText(appSettingsPath);
+                        dynamic jsonObj = Newtonsoft.Json.JsonConvert.DeserializeObject(json);
+                        jsonObj["AdminCredentials"]["Password"] = model.NewPassword;
+                        string output = Newtonsoft.Json.JsonConvert.SerializeObject(jsonObj, Newtonsoft.Json.Formatting.Indented);
+                        System.IO.File.WriteAllText(appSettingsPath, output);
+
+                        TempData["SuccessMessage"] = "Şifreniz başarıyla değiştirildi.";
+                        return RedirectToAction("Login");
+                    }
+                    else
+                    {
+                        ModelState.AddModelError(string.Empty, "Bu kullanıcı adı ile kayıtlı bir hesap bulunamadı.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Şifre sıfırlama hatası");
+                    ModelState.AddModelError(string.Empty, "Şifre sıfırlama sırasında bir hata oluştu.");
                 }
             }
 
@@ -259,31 +288,4 @@ namespace PerformansTakip.Controllers
                 .Select(s => s[random.Next(s.Length)]).ToArray());
         }
     }
-
-    public class ChangePasswordViewModel
-    {
-        [Required(ErrorMessage = "Mevcut şifre zorunludur")]
-        [Display(Name = "Mevcut Şifre")]
-        [DataType(DataType.Password)]
-        public string CurrentPassword { get; set; }
-
-        [Required(ErrorMessage = "Yeni şifre zorunludur")]
-        [Display(Name = "Yeni Şifre")]
-        [DataType(DataType.Password)]
-        public string NewPassword { get; set; }
-
-        [Required(ErrorMessage = "Şifre tekrarı zorunludur")]
-        [Display(Name = "Yeni Şifre Tekrar")]
-        [DataType(DataType.Password)]
-        [Compare("NewPassword", ErrorMessage = "Şifreler eşleşmiyor")]
-        public string ConfirmPassword { get; set; }
-    }
-
-    public class ForgotPasswordViewModel
-    {
-        [Required(ErrorMessage = "E-posta adresi zorunludur")]
-        [EmailAddress(ErrorMessage = "Geçerli bir e-posta adresi giriniz")]
-        [Display(Name = "E-posta")]
-        public string Email { get; set; }
-    }
-} 
+}

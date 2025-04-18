@@ -4,9 +4,8 @@ namespace PerformansTakip.ViewModels
 {
     public class ForgotPasswordViewModel
     {
-        [Required(ErrorMessage = "E-posta adresi zorunludur")]
-        [EmailAddress(ErrorMessage = "Geçerli bir e-posta adresi giriniz")]
-        [Display(Name = "E-posta")]
-        public string Email { get; set; }
+        [Required(ErrorMessage = "Kullanıcı adı zorunludur")]
+        [Display(Name = "Kullanıcı Adı")]
+        public string Username { get; set; }
     }
 } 

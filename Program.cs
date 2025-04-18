@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using PerformansTakip.Models;
 using System.IO;
+using PerformansTakip.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,22 +33,25 @@ var dbPath = Path.Combine(dataFolder, "PerformansTakip.db");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite($"Data Source={dbPath}"));
 
+builder.Services.AddScoped<EmailService>();
+
 var app = builder.Build();
 
 // Ensure database is created and seeded
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    db.Database.EnsureCreated();
+    db.Database.EnsureDeleted(); // Veritabanını tamamen sil
+    db.Database.EnsureCreated(); // Yeni veritabanı oluştur
 
-    // Admin kullanıcısını kontrol et ve ekle
+    // Admin kullanıcısını kesin olarak oluştur
     if (!db.Admins.Any())
     {
         var admin = new Admin
         {
-            Username = builder.Configuration["AdminCredentials:Username"],
-            Password = builder.Configuration["AdminCredentials:Password"],
-            Email = "admin@performanstakip.com",
+            Username = "admin",
+            Password = "admin1234",
+            Email = "ancellerdem1234@gmail.com",
             LastLogin = null
         };
         db.Admins.Add(admin);
