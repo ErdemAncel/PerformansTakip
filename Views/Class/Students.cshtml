@@ -675,7 +675,7 @@ Mehmet Kaya"></textarea>
             }
 
             const invalidNames = studentNames.filter(name => {
-                const parts = name.split('');
+                const parts = name.split(' ');
                 return parts.length < 2 || parts.some(part => part.length < 2);
             });
 
