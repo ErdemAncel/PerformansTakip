@@ -15,6 +15,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.IO;
+using PerformansTakip.Data;
+using System.Text;
+using System.Security.Cryptography;
 
 namespace PerformansTakip.Controllers
 {
@@ -40,13 +43,13 @@ namespace PerformansTakip.Controllers
         public IActionResult ListAdmins()
         {
             var admins = _context.Admins.ToList();
-            return Json(new { count = admins.Count, admins = admins });
+            return Json(new { count = admins.Count, admins = admins.Select(a => new { a.Username, a.Email, a.LastLogin }) });
         }
 
         [HttpGet]
         public async Task<IActionResult> Profile()
         {
-            if (!User.Identity.IsAuthenticated)
+            if (!User.Identity?.IsAuthenticated ?? true)
             {
                 return RedirectToAction("Login");
             }
@@ -76,7 +79,7 @@ namespace PerformansTakip.Controllers
         [HttpGet]
         public IActionResult Login()
         {
-            if (User.Identity.IsAuthenticated)
+            if (User.Identity?.IsAuthenticated ?? false)
             {
                 return RedirectToAction("Index", "Class");
             }
@@ -151,7 +154,7 @@ namespace PerformansTakip.Controllers
         [HttpGet]
         public IActionResult Register()
         {
-            if (User.Identity.IsAuthenticated)
+            if (User.Identity?.IsAuthenticated ?? false)
             {
                 return RedirectToAction("Index", "Class");
             }
@@ -201,7 +204,6 @@ namespace PerformansTakip.Controllers
                     ModelState.AddModelError(string.Empty, "Kayıt sırasında bir hata oluştu: " + ex.Message);
                 }
             }
-
             return View(model);
         }
 
@@ -209,13 +211,13 @@ namespace PerformansTakip.Controllers
         public async Task<IActionResult> Logout()
         {
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            return RedirectToAction("Login");
+            return RedirectToAction(nameof(Login));
         }
 
         [HttpGet]
         public IActionResult ChangePassword()
         {
-            if (!User.Identity.IsAuthenticated)
+            if (!User.Identity?.IsAuthenticated ?? true)
             {
                 return RedirectToAction("Login");
             }
@@ -225,51 +227,32 @@ namespace PerformansTakip.Controllers
         [HttpPost]
         public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
         {
-            if (!User.Identity.IsAuthenticated)
+            if (!User.Identity?.IsAuthenticated ?? true)
             {
                 return RedirectToAction("Login");
             }
 
             if (ModelState.IsValid)
             {
-                try
+                var username = User.Identity?.Name;
+                var admin = await _context.Admins.FirstOrDefaultAsync(a => a.Username == username);
+
+                if (admin == null)
                 {
-                    var username = User.Identity.Name;
-                    var admin = await _context.Admins.FirstOrDefaultAsync(a => a.Username == username);
-
-                    if (admin == null)
-                    {
-                        ModelState.AddModelError(string.Empty, "Kullanıcı bulunamadı.");
-                        return View(model);
-                    }
-
-                    // Mevcut şifre kontrolü
-                    if (admin.Password != model.CurrentPassword)
-                    {
-                        ModelState.AddModelError("CurrentPassword", "Mevcut şifre yanlış.");
-                        return View(model);
-                    }
-
-                    // Yeni şifrenin mevcut şifre ile aynı olup olmadığını kontrol et
-                    if (model.NewPassword == model.CurrentPassword)
-                    {
-                        ModelState.AddModelError("NewPassword", "Yeni şifre, mevcut şifre ile aynı olamaz.");
-                        return View(model);
-                    }
-
-                    // Yeni şifreyi güncelle
-                    admin.Password = model.NewPassword;
-                    await _context.SaveChangesAsync();
-
-                    TempData["SuccessMessage"] = "Şifreniz başarıyla değiştirildi.";
-                    await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-                    return RedirectToAction("Login");
+                    return NotFound();
                 }
-                catch (Exception ex)
+
+                if (admin.Password != model.CurrentPassword)
                 {
-                    _logger.LogError(ex, "Şifre değiştirme hatası");
-                    ModelState.AddModelError(string.Empty, "Şifre değiştirme sırasında bir hata oluştu: " + ex.Message);
+                    ModelState.AddModelError("CurrentPassword", "Mevcut şifre hatalı!");
+                    return View(model);
                 }
+
+                admin.Password = model.NewPassword;
+                await _context.SaveChangesAsync();
+
+                TempData["SuccessMessage"] = "Şifreniz başarıyla değiştirildi.";
+                return RedirectToAction(nameof(Profile));
             }
 
             return View(model);
@@ -286,26 +269,19 @@ namespace PerformansTakip.Controllers
         {
             if (ModelState.IsValid)
             {
-                try
-                {
-                    var admin = await _context.Admins
-                        .FirstOrDefaultAsync(a => a.Username.ToLower() == model.Username.ToLower());
+                var admin = await _context.Admins.FirstOrDefaultAsync(a => a.Username == model.Username);
 
-                    if (admin != null)
-                    {
-                        // Kullanıcı adı doğrulandı, şifre sıfırlama formuna yönlendir
-                        return RedirectToAction("ResetPassword", new { username = model.Username });
-                    }
-                    else
-                    {
-                        ModelState.AddModelError(string.Empty, "Bu kullanıcı adı ile kayıtlı bir hesap bulunamadı.");
-                    }
-                }
-                catch (Exception ex)
+                if (admin != null)
                 {
-                    _logger.LogError(ex, "Şifre sıfırlama hatası");
-                    ModelState.AddModelError(string.Empty, "Şifre sıfırlama sırasında bir hata oluştu.");
+                    var newPassword = GenerateRandomPassword();
+                    admin.Password = newPassword;
+                    await _context.SaveChangesAsync();
+
+                    TempData["SuccessMessage"] = $"Yeni şifreniz: {newPassword}";
+                    return RedirectToAction(nameof(Login));
                 }
+
+                ModelState.AddModelError("Username", "Kullanıcı bulunamadı.");
             }
 
             return View(model);
@@ -314,10 +290,12 @@ namespace PerformansTakip.Controllers
         [HttpGet]
         public IActionResult ResetPassword(string username)
         {
-            var model = new ResetPasswordViewModel
+            if (string.IsNullOrEmpty(username))
             {
-                Username = username
-            };
+                return RedirectToAction(nameof(Login));
+            }
+
+            var model = new ResetPasswordViewModel { Username = username };
             return View(model);
         }
 
@@ -326,38 +304,18 @@ namespace PerformansTakip.Controllers
         {
             if (ModelState.IsValid)
             {
-                try
+                var admin = await _context.Admins.FirstOrDefaultAsync(a => a.Username == model.Username);
+
+                if (admin != null)
                 {
-                    var admin = await _context.Admins
-                        .FirstOrDefaultAsync(a => a.Username.ToLower() == model.Username.ToLower());
+                    admin.Password = model.NewPassword;
+                    await _context.SaveChangesAsync();
 
-                    if (admin != null)
-                    {
-                        // Veritabanındaki şifreyi güncelle
-                        admin.Password = model.NewPassword;
-                        await _context.SaveChangesAsync();
-
-                        // appsettings.json dosyasını güncelle
-                        var appSettingsPath = Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json");
-                        var json = System.IO.File.ReadAllText(appSettingsPath);
-                        dynamic jsonObj = Newtonsoft.Json.JsonConvert.DeserializeObject(json);
-                        jsonObj["AdminCredentials"]["Password"] = model.NewPassword;
-                        string output = Newtonsoft.Json.JsonConvert.SerializeObject(jsonObj, Newtonsoft.Json.Formatting.Indented);
-                        System.IO.File.WriteAllText(appSettingsPath, output);
-
-                        TempData["SuccessMessage"] = "Şifreniz başarıyla değiştirildi.";
-                        return RedirectToAction("Login");
-                    }
-                    else
-                    {
-                        ModelState.AddModelError(string.Empty, "Bu kullanıcı adı ile kayıtlı bir hesap bulunamadı.");
-                    }
+                    TempData["SuccessMessage"] = "Şifreniz başarıyla sıfırlandı.";
+                    return RedirectToAction(nameof(Login));
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Şifre sıfırlama hatası");
-                    ModelState.AddModelError(string.Empty, "Şifre sıfırlama sırasında bir hata oluştu.");
-                }
+
+                ModelState.AddModelError("Username", "Kullanıcı bulunamadı.");
             }
 
             return View(model);
@@ -365,10 +323,18 @@ namespace PerformansTakip.Controllers
 
         private string GenerateRandomPassword()
         {
-            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+";
-            var random = new Random();
-            return new string(Enumerable.Repeat(chars, 12)
-                .Select(s => s[random.Next(s.Length)]).ToArray());
+            const string validChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()_+";
+            using var rng = new RNGCryptoServiceProvider();
+            var bytes = new byte[16];
+            rng.GetBytes(bytes);
+
+            var password = new StringBuilder();
+            for (int i = 0; i < 12; i++)
+            {
+                password.Append(validChars[bytes[i] % validChars.Length]);
+            }
+
+            return password.ToString();
         }
     }
 }

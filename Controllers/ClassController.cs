@@ -4,6 +4,7 @@ using PerformansTakip.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Threading.Tasks;
+using PerformansTakip.Data;
 
 namespace PerformansTakip.Controllers
 {

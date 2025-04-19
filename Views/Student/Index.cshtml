@@ -1,0 +1,68 @@
+@model IEnumerable<PerformansTakip.Models.Student>
+
+@{
+    ViewData["Title"] = "Öğrenci Listesi";
+}
+
+<div class="container mt-4">
+    <h2>Öğrenci Listesi</h2>
+
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>@Html.DisplayNameFor(model => model.FirstName)</th>
+                    <th>@Html.DisplayNameFor(model => model.LastName)</th>
+                    <th>@Html.DisplayNameFor(model => model.Class)</th>
+                    <th>@Html.DisplayNameFor(model => model.UniformStatus)</th>
+                    <th>@Html.DisplayNameFor(model => model.HomeworkStatus)</th>
+                    <th>@Html.DisplayNameFor(model => model.PerformanceScore)</th>
+                    <th>@Html.DisplayNameFor(model => model.LastUpdated)</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@Html.DisplayFor(modelItem => item.FirstName)</td>
+                        <td>@Html.DisplayFor(modelItem => item.LastName)</td>
+                        <td>@Html.DisplayFor(modelItem => item.Class.Name)</td>
+                        <td>
+                            @if (item.UniformStatus)
+                            {
+                                <span class="badge bg-success">Uygun</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger">Uygun Değil</span>
+                            }
+                        </td>
+                        <td>
+                            @if (item.HomeworkStatus)
+                            {
+                                <span class="badge bg-success">Tamamlandı</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger">Tamamlanmadı</span>
+                            }
+                        </td>
+                        <td>
+                            <div class="progress">
+                                <div class="progress-bar @(item.PerformanceScore >= 70 ? "bg-success" : item.PerformanceScore >= 50 ? "bg-warning" : "bg-danger")"
+                                     role="progressbar"
+                                     style="width: @(item.PerformanceScore)%"
+                                     aria-valuenow="@item.PerformanceScore"
+                                     aria-valuemin="0"
+                                     aria-valuemax="100">
+                                    @item.PerformanceScore%
+                                </div>
+                            </div>
+                        </td>
+                        <td>@item.LastUpdated.ToString("dd/MM/yyyy HH:mm")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div> 

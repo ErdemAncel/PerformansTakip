@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using PerformansTakip.Models;
 using System.IO;
 using PerformansTakip.Services;
+using PerformansTakip.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
