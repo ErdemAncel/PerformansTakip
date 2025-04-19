@@ -273,12 +273,8 @@ namespace PerformansTakip.Controllers
 
                 if (admin != null)
                 {
-                    var newPassword = GenerateRandomPassword();
-                    admin.Password = newPassword;
-                    await _context.SaveChangesAsync();
-
-                    TempData["SuccessMessage"] = $"Yeni şifreniz: {newPassword}";
-                    return RedirectToAction(nameof(Login));
+                    // Kullanıcıyı şifre sıfırlama sayfasına yönlendir
+                    return RedirectToAction(nameof(ResetPassword), new { username = model.Username });
                 }
 
                 ModelState.AddModelError("Username", "Kullanıcı bulunamadı.");
@@ -288,15 +284,9 @@ namespace PerformansTakip.Controllers
         }
 
         [HttpGet]
-        public IActionResult ResetPassword(string username)
+        public IActionResult ResetPassword()
         {
-            if (string.IsNullOrEmpty(username))
-            {
-                return RedirectToAction(nameof(Login));
-            }
-
-            var model = new ResetPasswordViewModel { Username = username };
-            return View(model);
+            return View();
         }
 
         [HttpPost]
@@ -304,18 +294,19 @@ namespace PerformansTakip.Controllers
         {
             if (ModelState.IsValid)
             {
-                var admin = await _context.Admins.FirstOrDefaultAsync(a => a.Username == model.Username);
-
-                if (admin != null)
+                var user = await _context.Admins.FirstOrDefaultAsync(u => u.Username == model.Username);
+                if (user == null)
                 {
-                    admin.Password = model.NewPassword;
-                    await _context.SaveChangesAsync();
-
-                    TempData["SuccessMessage"] = "Şifreniz başarıyla sıfırlandı.";
-                    return RedirectToAction(nameof(Login));
+                    ModelState.AddModelError("", "Kullanıcı bulunamadı.");
+                    return View(model);
                 }
 
-                ModelState.AddModelError("Username", "Kullanıcı bulunamadı.");
+                // Store password directly (consistent with other parts of the application)
+                user.Password = model.NewPassword;
+                await _context.SaveChangesAsync();
+                
+                TempData["SuccessMessage"] = "Şifreniz başarıyla güncellendi.";
+                return RedirectToAction("Login");
             }
 
             return View(model);

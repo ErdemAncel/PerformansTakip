@@ -1,8 +1,281 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Ana Sayfa";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="container mt-4">
+    <!-- Üst Bilgi Kartları -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card mb-4 shadow-sm hover-card">
+                <div class="card-body text-center">
+                    <div class="icon-circle bg-primary text-white mb-3">
+                        <i class="fas fa-users fa-2x"></i>
+                    </div>
+                    <h5 class="card-title">Toplam Sınıf</h5>
+                    <p class="card-text display-4">@ViewBag.TotalClasses</p>
+                    <a href="@Url.Action("Index", "Class")" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-arrow-right me-1"></i> Sınıfları Görüntüle
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card mb-4 shadow-sm hover-card">
+                <div class="card-body text-center">
+                    <div class="icon-circle bg-success text-white mb-3">
+                        <i class="fas fa-user-graduate fa-2x"></i>
+                    </div>
+                    <h5 class="card-title">Toplam Öğrenci</h5>
+                    <p class="card-text display-4">@ViewBag.TotalStudents</p>
+                    <a href="@Url.Action("Index", "Student")" class="btn btn-outline-success btn-sm">
+                        <i class="fas fa-arrow-right me-1"></i> Öğrencileri Görüntüle
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card mb-4 shadow-sm hover-card">
+                <div class="card-body text-center">
+                    <div class="icon-circle bg-info text-white mb-3">
+                        <i class="fas fa-chart-line fa-2x"></i>
+                    </div>
+                    <h5 class="card-title">Ortalama Performans</h5>
+                    <p class="card-text display-4">@ViewBag.AveragePerformance</p>
+                    <div class="progress mt-2">
+                        <div class="progress-bar bg-info" role="progressbar" style="width: @(ViewBag.AveragePerformance)%" 
+                             aria-valuenow="@ViewBag.AveragePerformance" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- İstatistikler ve Grafikler -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm hover-card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Sınıf Dağılımı</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Sınıf</th>
+                                    <th>Öğrenci Sayısı</th>
+                                    <th>Oran</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (ViewBag.ClassDistribution != null)
+                                {
+                                    foreach (var item in ViewBag.ClassDistribution)
+                                    {
+                                        var percentage = ViewBag.TotalStudents > 0 ? Math.Round((double)item.StudentCount / ViewBag.TotalStudents * 100, 1) : 0;
+                                        <tr>
+                                            <td>@item.ClassName</td>
+                                            <td>@item.StudentCount</td>
+                                            <td>
+                                                <div class="progress" style="height: 5px;">
+                                                    <div class="progress-bar bg-primary" role="progressbar" style="width: @percentage%"></div>
+                                                </div>
+                                                <small>@percentage%</small>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm hover-card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Performans Dağılımı</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Puan Aralığı</th>
+                                    <th>Öğrenci Sayısı</th>
+                                    <th>Oran</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (ViewBag.PerformanceDistribution != null)
+                                {
+                                    foreach (var item in ViewBag.PerformanceDistribution)
+                                    {
+                                        var percentage = ViewBag.TotalStudents > 0 ? Math.Round((double)item.Count / ViewBag.TotalStudents * 100, 1) : 0;
+                                        <tr>
+                                            <td>@item.Range</td>
+                                            <td>@item.Count</td>
+                                            <td>
+                                                <div class="progress" style="height: 5px;">
+                                                    <div class="progress-bar bg-success" role="progressbar" style="width: @percentage%"></div>
+                                                </div>
+                                                <small>@percentage%</small>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Durum İstatistikleri -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm hover-card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-tshirt me-2"></i>Kıyafet Durumu</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        @if (ViewBag.UniformStats != null)
+                        {
+                            foreach (var stat in ViewBag.UniformStats)
+                            {
+                                var percentage = ViewBag.TotalStudents > 0 ? Math.Round((double)stat.Count / ViewBag.TotalStudents * 100, 1) : 0;
+                                <div class="col-md-6 mb-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span>@(stat.Status ? "Uygun" : "Uygun Değil")</span>
+                                        <span class="badge bg-@(stat.Status ? "success" : "danger")">@stat.Count</span>
+                                    </div>
+                                    <div class="progress" style="height: 5px;">
+                                        <div class="progress-bar bg-@(stat.Status ? "success" : "danger")" role="progressbar" style="width: @percentage%"></div>
+                                    </div>
+                                    <small class="text-muted">@percentage%</small>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm hover-card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-book me-2"></i>Ödev Durumu</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        @if (ViewBag.HomeworkStats != null)
+                        {
+                            foreach (var stat in ViewBag.HomeworkStats)
+                            {
+                                var percentage = ViewBag.TotalStudents > 0 ? Math.Round((double)stat.Count / ViewBag.TotalStudents * 100, 1) : 0;
+                                <div class="col-md-6 mb-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span>@(stat.Status ? "Tamamlandı" : "Tamamlanmadı")</span>
+                                        <span class="badge bg-@(stat.Status ? "success" : "danger")">@stat.Count</span>
+                                    </div>
+                                    <div class="progress" style="height: 5px;">
+                                        <div class="progress-bar bg-@(stat.Status ? "success" : "danger")" role="progressbar" style="width: @percentage%"></div>
+                                    </div>
+                                    <small class="text-muted">@percentage%</small>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Son Güncellemeler -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow-sm hover-card">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="fas fa-history me-2"></i>Son Güncellemeler</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Öğrenci</th>
+                                    <th>Sınıf</th>
+                                    <th>Güncelleme</th>
+                                    <th>Tarih</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (ViewBag.RecentUpdates != null)
+                                {
+                                    foreach (var update in ViewBag.RecentUpdates)
+                                    {
+                                        <tr>
+                                            <td>@update.StudentName</td>
+                                            <td>@update.ClassName</td>
+                                            <td>@update.UpdateType</td>
+                                            <td>@update.UpdateDate.ToString("dd.MM.yyyy HH:mm")</td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="4" class="text-center">Henüz güncelleme bulunmamaktadır.</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<style>
+    .icon-circle {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+    }
+    
+    .hover-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .hover-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+    }
+    
+    .progress {
+        background-color: #e9ecef;
+        border-radius: 0.25rem;
+    }
+    
+    .card-header {
+        border-bottom: 0;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Sayfa yüklendiğinde animasyonları başlat
+            $('.card').addClass('animate__animated animate__fadeIn');
+            
+            // Tablolar için zebra efekti
+            $('.table tbody tr:odd').addClass('table-light');
+        });
+    </script>
+}

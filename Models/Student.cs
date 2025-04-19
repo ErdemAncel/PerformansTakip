@@ -32,6 +32,9 @@ namespace PerformansTakip.Models
         [Display(Name = "Son Güncelleme")]
         public DateTime LastUpdated { get; set; }
 
+        [Display(Name = "Son Güncelleme Türü")]
+        public string LastUpdateType { get; set; } = "Performans Güncellemesi";
+
         // Navigation property
         [ForeignKey("ClassId")]
         public virtual Class? Class { get; set; }

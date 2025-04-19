@@ -105,6 +105,7 @@ namespace PerformansTakip.Controllers
 
             student.UniformStatus = status;
             student.LastUpdated = DateTime.Now;
+            student.LastUpdateType = "Kıyafet Güncellemesi";
             await _context.SaveChangesAsync();
 
             return Json(new { success = true });
@@ -118,6 +119,7 @@ namespace PerformansTakip.Controllers
             {
                 student.HomeworkStatus = status;
                 student.LastUpdated = DateTime.Now;
+                student.LastUpdateType = "Ödev Güncellemesi";
                 _context.SaveChanges();
                 return Json(new { success = true });
             }
@@ -132,6 +134,7 @@ namespace PerformansTakip.Controllers
             {
                 student.PerformanceScore = score;
                 student.LastUpdated = DateTime.Now;
+                student.LastUpdateType = "Performans Güncellemesi";
                 _context.SaveChanges();
                 return Json(new { success = true });
             }
