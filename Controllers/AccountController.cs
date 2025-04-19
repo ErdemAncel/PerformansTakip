@@ -234,36 +234,41 @@ namespace PerformansTakip.Controllers
             {
                 try
                 {
-                    var adminUsername = _configuration["AdminCredentials:Username"];
-                    var admin = await _context.Admins.FirstOrDefaultAsync(a => a.Username == adminUsername);
+                    var username = User.Identity.Name;
+                    var admin = await _context.Admins.FirstOrDefaultAsync(a => a.Username == username);
 
-                    if (admin != null)
+                    if (admin == null)
                     {
-                        // Mevcut şifre kontrolü
-                        if (admin.Password == model.CurrentPassword)
-                        {
-                            // Yeni şifreyi güncelle
-                            admin.Password = model.NewPassword;
-                            await _context.SaveChangesAsync();
+                        ModelState.AddModelError(string.Empty, "Kullanıcı bulunamadı.");
+                        return View(model);
+                    }
 
-                            TempData["SuccessMessage"] = "Şifreniz başarıyla değiştirildi.";
-                            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-                            return RedirectToAction("Login");
-                        }
-                        else
-                        {
-                            ModelState.AddModelError(string.Empty, "Mevcut şifre yanlış.");
-                        }
-                    }
-                    else
+                    // Mevcut şifre kontrolü
+                    if (admin.Password != model.CurrentPassword)
                     {
-                        ModelState.AddModelError(string.Empty, "Admin kullanıcısı bulunamadı.");
+                        ModelState.AddModelError("CurrentPassword", "Mevcut şifre yanlış.");
+                        return View(model);
                     }
+
+                    // Yeni şifrenin mevcut şifre ile aynı olup olmadığını kontrol et
+                    if (model.NewPassword == model.CurrentPassword)
+                    {
+                        ModelState.AddModelError("NewPassword", "Yeni şifre, mevcut şifre ile aynı olamaz.");
+                        return View(model);
+                    }
+
+                    // Yeni şifreyi güncelle
+                    admin.Password = model.NewPassword;
+                    await _context.SaveChangesAsync();
+
+                    TempData["SuccessMessage"] = "Şifreniz başarıyla değiştirildi.";
+                    await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                    return RedirectToAction("Login");
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Şifre değiştirme hatası");
-                    ModelState.AddModelError(string.Empty, "Şifre değiştirme sırasında bir hata oluştu.");
+                    ModelState.AddModelError(string.Empty, "Şifre değiştirme sırasında bir hata oluştu: " + ex.Message);
                 }
             }
 

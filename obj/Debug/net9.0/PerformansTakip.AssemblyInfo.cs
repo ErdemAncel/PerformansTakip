@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("PerformansTakip")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+efca654652f438e38d31431f9bb7d20e19cdbd80")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0d0b6fa185a045221c0030b6754f3d094ebb7ad7")]
 [assembly: System.Reflection.AssemblyProductAttribute("PerformansTakip")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PerformansTakip")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
